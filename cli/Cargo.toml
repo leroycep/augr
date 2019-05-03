@@ -1,0 +1,13 @@
+[package]
+name = "cli"
+version = "0.1.0"
+authors = ["LeRoyce Pearson <leroycepearson@geemili.xyz>"]
+edition = "2018"
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+structopt = "0.2"
+directories = "1.0"
+csv = "1"
+serde = "1"
+serde_derive = "1"
