@@ -33,13 +33,31 @@ fn main() {
         }
         Command::List => {
             let today = Utc::today();
-            for t in timesheet.transitions.iter().filter(|x| x.0.date() == today) {
-                println!(
-                    "{} {}",
-                    t.0.with_timezone(&chrono::Local).format("%H:%M"),
+            let mut t_iter = timesheet
+                .transitions
+                .iter()
+                .filter(|x| x.0.date() == today)
+                .peekable();
+
+            println!("Start Duration  Tags");
+            println!("――――― ――――――――  ――――――――");
+            while let Some(t) = t_iter.next() {
+                let start_time = t.0.with_timezone(&chrono::Local).format("%H:%M");
+                let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Utc::now());
+                let tags_str =
                     t.1.iter()
-                        .fold(String::new(), |acc, x| format!("{} {}", acc, x.0))
-                );
+                        .fold(String::new(), |acc, x| format!("{} {}", acc, x.0));
+
+                let duration = next_time.signed_duration_since(t.0.clone());
+                let hours = duration.num_hours();
+                let mins = duration.num_minutes() - (hours * 60);
+                let duration_str = if hours < 1 {
+                    format!("{}m", mins)
+                } else {
+                    format!("{}h {}m", hours, mins)
+                };
+
+                println!("{} {: <8} {}", start_time, duration_str, tags_str);
             }
         }
     }
