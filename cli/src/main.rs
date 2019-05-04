@@ -31,34 +31,7 @@ fn main() {
         Command::Start { tags } => {
             start_tracking(&mut timesheet, tags.into_iter().map(|s| s.into()).collect())
         }
-        Command::List => {
-            let today = Utc::today();
-            let mut t_iter = timesheet
-                .transitions
-                .iter()
-                .filter(|x| x.0.date() == today)
-                .peekable();
-
-            let mut total_duration = chrono::Duration::seconds(0);
-
-            println!("Start Duration Total     Tags");
-            println!("――――― ―――――――― ――――――――  ――――――――");
-            while let Some(t) = t_iter.next() {
-                let start_time = t.0.with_timezone(&chrono::Local).format("%H:%M");
-                let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Utc::now());
-                let tags_str =
-                    t.1.iter()
-                        .fold(String::new(), |acc, x| format!("{} {}", acc, x.0));
-
-                let duration = next_time.signed_duration_since(t.0.clone());
-                total_duration = total_duration + duration;
-
-                let duration_str = format_duration(duration);
-                let total_duration_str = format_duration(total_duration);
-
-                println!("{} {: <8} {: <8} {}", start_time, duration_str, total_duration_str, tags_str);
-            }
-        }
+        Command::List => list_tracking(&timesheet),
     }
 
     save_timesheet(&data_file, &timesheet);
@@ -118,6 +91,40 @@ fn save_timesheet(path: &Path, timesheet: &Timesheet) {
 fn start_tracking(timesheet: &mut Timesheet, tags: HashSet<Tag>) {
     let now = Utc::now();
     timesheet.transitions.insert(now, tags);
+}
+
+fn list_tracking(timesheet: &Timesheet) {
+    let today = Utc::today();
+    let mut t_iter = timesheet
+        .transitions
+        .iter()
+        .filter(|x| x.0.date() == today)
+        .peekable();
+
+    let mut total_duration = chrono::Duration::seconds(0);
+
+    println!("Start Duration Total     Tags");
+    println!(
+        "――――― ―――――――― ――――――――  ――――――――"
+    );
+    while let Some(t) = t_iter.next() {
+        let start_time = t.0.with_timezone(&chrono::Local).format("%H:%M");
+        let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Utc::now());
+        let tags_str =
+            t.1.iter()
+                .fold(String::new(), |acc, x| format!("{} {}", acc, x.0));
+
+        let duration = next_time.signed_duration_since(t.0.clone());
+        total_duration = total_duration + duration;
+
+        let duration_str = format_duration(duration);
+        let total_duration_str = format_duration(total_duration);
+
+        println!(
+            "{} {: <8} {: <8} {}",
+            start_time, duration_str, total_duration_str, tags_str
+        );
+    }
 }
 
 fn format_duration(duration: chrono::Duration) -> String {
