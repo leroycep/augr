@@ -8,13 +8,16 @@ use structopt::StructOpt;
 #[structopt(name = "timetrack")]
 struct Opt {
     #[structopt(subcommand)]
-    cmd: Command,
+    cmd: Option<Command>,
 }
 
 #[derive(StructOpt, Debug)]
 enum Command {
     #[structopt(name = "start")]
     Start { tags: Vec<String> },
+
+    #[structopt(name = "list")]
+    List,
 }
 
 fn main() {
@@ -25,9 +28,20 @@ fn main() {
 
     let mut timesheet = load_timesheet(&data_file);
 
-    match opt.cmd {
+    match opt.cmd.unwrap_or(Command::List) {
         Command::Start { tags } => {
             start_tracking(&mut timesheet, tags.into_iter().map(|s| s.into()).collect())
+        }
+        Command::List => {
+            let today = Utc::today();
+            for t in timesheet.transitions.iter().filter(|x| x.0.date() == today) {
+                println!(
+                    "{} {}",
+                    t.0.with_timezone(&chrono::Local).format("%H:%M"),
+                    t.1.iter()
+                        .fold(String::new(), |acc, x| format!("{} {}", acc, x.0))
+                );
+            }
         }
     }
 
