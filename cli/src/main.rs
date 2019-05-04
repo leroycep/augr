@@ -16,7 +16,7 @@ enum Command {
     Start { tags: Vec<String> },
 
     #[structopt(name = "list")]
-    List,
+    List { tags: Vec<String> },
 }
 
 fn main() {
@@ -27,11 +27,13 @@ fn main() {
 
     let mut timesheet = load_timesheet(&data_file);
 
-    match opt.cmd.unwrap_or(Command::List) {
+    match opt.cmd.unwrap_or(Command::List { tags: Vec::new() }) {
         Command::Start { tags } => {
             start_tracking(&mut timesheet, tags.into_iter().map(|s| s.into()).collect())
         }
-        Command::List => list_tracking(&timesheet),
+        Command::List { tags } => {
+            list_tracking(&timesheet, &tags.into_iter().map(|s| s.into()).collect())
+        }
     }
 
     save_timesheet(&data_file, &timesheet);
@@ -93,12 +95,13 @@ fn start_tracking(timesheet: &mut Timesheet, tags: HashSet<Tag>) {
     timesheet.transitions.insert(now, tags);
 }
 
-fn list_tracking(timesheet: &Timesheet) {
+fn list_tracking(timesheet: &Timesheet, tags: &HashSet<Tag>) {
     let today = Utc::today();
     let mut t_iter = timesheet
         .transitions
         .iter()
         .filter(|x| x.0.date() == today)
+        .filter(|x| x.1.is_superset(tags))
         .peekable();
 
     let mut total_duration = chrono::Duration::seconds(0);
