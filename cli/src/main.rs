@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use serde_derive::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 use structopt::StructOpt;
@@ -53,10 +52,7 @@ struct Timesheet {
     transitions: BTreeMap<DateTime<Utc>, HashSet<Tag>>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Transition(DateTime<Utc>, HashSet<Tag>);
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct Tag(String);
 
 impl From<String> for Tag {
@@ -66,35 +62,38 @@ impl From<String> for Tag {
 }
 
 fn load_timesheet(path: &Path) -> Timesheet {
+    use std::io::Read;
+
     let mut timesheet = Timesheet::new();
     if !path.exists() {
         return timesheet;
     }
-    let mut rdr = csv::ReaderBuilder::new()
-        .delimiter(b' ')
-        .has_headers(false)
-        .flexible(true)
-        .from_path(path)
-        .unwrap();
-    for result in rdr.deserialize() {
-        let transition: Transition = result.unwrap();
-        timesheet.transitions.insert(transition.0, transition.1);
+
+    let mut rdr = std::fs::OpenOptions::new().read(true).open(path).unwrap();
+    let mut contents = String::new();
+    rdr.read_to_string(&mut contents).unwrap();
+
+    for line in contents.lines() {
+        let mut cols = line.split(' ');
+        let time = cols.next().unwrap().parse().unwrap();
+        let tags = cols.map(|x| Tag(x.into())).collect();
+        timesheet.transitions.insert(time, tags);
     }
     timesheet
 }
 
 fn save_timesheet(path: &Path, timesheet: &Timesheet) {
+    use std::io::Write;
+
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    let mut wtr = csv::WriterBuilder::new()
-        .delimiter(b' ')
-        .has_headers(false)
-        .flexible(true)
-        .from_path(path)
-        .unwrap();
+    let mut wtr = std::fs::OpenOptions::new().write(true).open(path).unwrap();
 
     for (start_time, tags) in timesheet.transitions.iter() {
-        wtr.serialize(Transition(*start_time, tags.clone()))
-            .unwrap();
+        write!(wtr, "{}", start_time.to_rfc3339()).unwrap();
+        for t in tags {
+            write!(wtr, " {}", t.0).unwrap();
+        }
+        wtr.write(b"\n").unwrap();
     }
     wtr.flush().unwrap();
 }
