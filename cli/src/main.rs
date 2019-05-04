@@ -39,8 +39,10 @@ fn main() {
                 .filter(|x| x.0.date() == today)
                 .peekable();
 
-            println!("Start Duration  Tags");
-            println!("――――― ――――――――  ――――――――");
+            let mut total_duration = chrono::Duration::seconds(0);
+
+            println!("Start Duration Total     Tags");
+            println!("――――― ―――――――― ――――――――  ――――――――");
             while let Some(t) = t_iter.next() {
                 let start_time = t.0.with_timezone(&chrono::Local).format("%H:%M");
                 let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Utc::now());
@@ -49,15 +51,12 @@ fn main() {
                         .fold(String::new(), |acc, x| format!("{} {}", acc, x.0));
 
                 let duration = next_time.signed_duration_since(t.0.clone());
-                let hours = duration.num_hours();
-                let mins = duration.num_minutes() - (hours * 60);
-                let duration_str = if hours < 1 {
-                    format!("{}m", mins)
-                } else {
-                    format!("{}h {}m", hours, mins)
-                };
+                total_duration = total_duration + duration;
 
-                println!("{} {: <8} {}", start_time, duration_str, tags_str);
+                let duration_str = format_duration(duration);
+                let total_duration_str = format_duration(total_duration);
+
+                println!("{} {: <8} {: <8} {}", start_time, duration_str, total_duration_str, tags_str);
             }
         }
     }
@@ -119,6 +118,16 @@ fn save_timesheet(path: &Path, timesheet: &Timesheet) {
 fn start_tracking(timesheet: &mut Timesheet, tags: HashSet<Tag>) {
     let now = Utc::now();
     timesheet.transitions.insert(now, tags);
+}
+
+fn format_duration(duration: chrono::Duration) -> String {
+    let hours = duration.num_hours();
+    let mins = duration.num_minutes() - (hours * 60);
+    if hours < 1 {
+        format!("{}m", mins)
+    } else {
+        format!("{}h {}m", hours, mins)
+    }
 }
 
 impl Timesheet {
