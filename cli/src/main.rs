@@ -56,7 +56,12 @@ fn load_timesheet(path: &Path) -> Timesheet {
     if !path.exists() {
         return timesheet;
     }
-    let mut rdr = csv::Reader::from_path(path).unwrap();
+    let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(b' ')
+        .has_headers(false)
+        .flexible(true)
+        .from_path(path)
+        .unwrap();
     for result in rdr.deserialize() {
         let transition: Transition = result.unwrap();
         timesheet.transitions.insert(transition.0, transition.1);
@@ -66,12 +71,18 @@ fn load_timesheet(path: &Path) -> Timesheet {
 
 fn save_timesheet(path: &Path, timesheet: &Timesheet) {
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    let mut wtr = csv::Writer::from_path(path).unwrap();
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(b' ')
+        .has_headers(false)
+        .flexible(true)
+        .from_path(path)
+        .unwrap();
 
     for (start_time, tags) in timesheet.transitions.iter() {
         wtr.serialize(Transition(*start_time, tags.clone()))
             .unwrap();
     }
+    wtr.flush().unwrap();
 }
 
 fn start_tracking(timesheet: &mut Timesheet, tags: HashSet<Tag>) {
