@@ -17,6 +17,9 @@ enum Command {
 
     #[structopt(name = "list")]
     List { tags: Vec<String> },
+
+    #[structopt(name = "week")]
+    Week { tags: Vec<String> },
 }
 
 fn main() {
@@ -33,6 +36,9 @@ fn main() {
         }
         Command::List { tags } => {
             list_tracking(&timesheet, &tags.into_iter().map(|s| s.into()).collect())
+        }
+        Command::Week { tags } => {
+            show_week(&timesheet, &tags.into_iter().map(|s| s.into()).collect())
         }
     }
 
@@ -128,6 +134,51 @@ fn list_tracking(timesheet: &Timesheet, tags: &HashSet<Tag>) {
             start_time, duration_str, total_duration_str, tags_str
         );
     }
+}
+
+fn show_week(timesheet: &Timesheet, tags: &HashSet<Tag>) {
+    let today = chrono::Local::today();
+    let start_date = today - chrono::Duration::days(6);
+
+    let mut cur_date = start_date;
+
+    print!("Day ");
+    for hour in 0..24 {
+        print!("{: <3}", hour);
+    }
+    println!();
+
+    while cur_date <= today {
+        print!("{} ", cur_date.format("%a"));
+        for section in 0..(24 * 3) {
+            let hour = section / 3;
+            let minutes = (section % 3) * 20;
+            let cur_datetime = cur_date.and_hms(hour, minutes, 0);
+            let cur_tags = tags_at_time(timesheet, &cur_datetime.with_timezone(&Utc));
+            let matches = cur_tags
+                .map(|x| tags.is_subset(x) && !x.is_empty())
+                .unwrap_or(false);
+
+            if matches {
+                print!("█");
+            } else {
+                print!(" ");
+            }
+        }
+        println!();
+        cur_date = cur_date + chrono::Duration::days(1);
+    }
+}
+
+fn tags_at_time<'ts>(
+    timesheet: &'ts Timesheet,
+    datetime: &DateTime<Utc>,
+) -> Option<&'ts HashSet<Tag>> {
+    timesheet
+        .transitions
+        .range(..datetime)
+        .map(|(_time, tags)| tags)
+        .last()
 }
 
 fn format_duration(duration: chrono::Duration) -> String {
