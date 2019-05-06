@@ -138,6 +138,7 @@ fn list_tracking(timesheet: &Timesheet, tags: &HashSet<Tag>) {
 
 fn show_week(timesheet: &Timesheet, tags: &HashSet<Tag>) {
     let today = chrono::Local::today();
+    let now = chrono::Local::now();
     let start_date = today - chrono::Duration::days(6);
 
     let mut cur_date = start_date;
@@ -159,7 +160,9 @@ fn show_week(timesheet: &Timesheet, tags: &HashSet<Tag>) {
                 .map(|x| tags.is_subset(x) && !x.is_empty())
                 .unwrap_or(false);
 
-            if matches {
+            let in_past = cur_datetime <= now;
+
+            if matches && in_past {
                 print!("█");
             } else {
                 print!(" ");
