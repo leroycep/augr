@@ -1,4 +1,6 @@
 mod show_week;
+mod summary;
+mod start;
 
 use chrono::{DateTime, Utc};
 use std::collections::{BTreeMap, HashSet};
@@ -15,10 +17,10 @@ struct Opt {
 #[derive(StructOpt, Debug)]
 enum Command {
     #[structopt(name = "start")]
-    Start { tags: Vec<String> },
+    Start(start::StartCmd),
 
-    #[structopt(name = "list")]
-    List { tags: Vec<String> },
+    #[structopt(name = "summary")]
+    Summary(summary::SummaryCmd),
 
     #[structopt(name = "week")]
     Week(show_week::ShowWeekCmd),
@@ -32,13 +34,9 @@ fn main() {
 
     let mut timesheet = load_timesheet(&data_file);
 
-    match opt.cmd.unwrap_or(Command::List { tags: Vec::new() }) {
-        Command::Start { tags } => {
-            start_tracking(&mut timesheet, tags.into_iter().map(|s| s.into()).collect())
-        }
-        Command::List { tags } => {
-            list_tracking(&timesheet, &tags.into_iter().map(|s| s.into()).collect())
-        }
+    match opt.cmd.unwrap_or(Command::default()) {
+        Command::Start(subcmd) => subcmd.exec(&mut timesheet),
+        Command::Summary(subcmd) => subcmd.exec(&timesheet),
         Command::Week(subcmd) => subcmd.exec(&timesheet),
     }
 
@@ -52,12 +50,6 @@ pub struct Timesheet {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Tag(String);
-
-impl From<String> for Tag {
-    fn from(s: String) -> Self {
-        Self(s)
-    }
-}
 
 fn load_timesheet(path: &Path) -> Timesheet {
     use std::io::Read;
@@ -96,46 +88,6 @@ fn save_timesheet(path: &Path, timesheet: &Timesheet) {
     wtr.flush().unwrap();
 }
 
-fn start_tracking(timesheet: &mut Timesheet, tags: HashSet<Tag>) {
-    let now = Utc::now();
-    timesheet.transitions.insert(now, tags);
-}
-
-fn list_tracking(timesheet: &Timesheet, tags: &HashSet<Tag>) {
-    let today = Utc::today();
-    let mut t_iter = timesheet
-        .transitions
-        .iter()
-        .filter(|x| x.0.date() == today)
-        .filter(|x| x.1.is_superset(tags))
-        .peekable();
-
-    let mut total_duration = chrono::Duration::seconds(0);
-
-    println!("Start Duration Total     Tags");
-    println!(
-        "――――― ―――――――― ――――――――  ――――――――"
-    );
-    while let Some(t) = t_iter.next() {
-        let start_time = t.0.with_timezone(&chrono::Local).format("%H:%M");
-        let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Utc::now());
-        let tags_str =
-            t.1.iter()
-                .fold(String::new(), |acc, x| format!("{} {}", acc, x.0));
-
-        let duration = next_time.signed_duration_since(t.0.clone());
-        total_duration = total_duration + duration;
-
-        let duration_str = format_duration(duration);
-        let total_duration_str = format_duration(total_duration);
-
-        println!(
-            "{} {: <8} {: <8} {}",
-            start_time, duration_str, total_duration_str, tags_str
-        );
-    }
-}
-
 fn tags_at_time<'ts>(
     timesheet: &'ts Timesheet,
     datetime: &DateTime<Utc>,
@@ -162,5 +114,17 @@ impl Timesheet {
         Self {
             transitions: BTreeMap::new(),
         }
+    }
+}
+
+impl From<String> for Tag {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl Default for Command {
+    fn default() -> Self {
+        Command::Summary(summary::SummaryCmd::default())
     }
 }
