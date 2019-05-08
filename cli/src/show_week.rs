@@ -6,7 +6,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "week")]
 pub struct ShowWeekCmd {
-    #[structopt(help = "A list of tags to filter with")]
+    /// A list of tags to filter against
     tags: Vec<String>,
 }
 

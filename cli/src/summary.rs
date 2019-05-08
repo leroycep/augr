@@ -8,7 +8,7 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct SummaryCmd {
-    #[structopt(help = "A list of tags to filter with")]
+    /// A list of tags to filter against
     tags: Vec<String>,
 }
 

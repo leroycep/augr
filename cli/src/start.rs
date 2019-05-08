@@ -5,7 +5,7 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct StartCmd {
-    #[structopt(help = "A list of tags that represent what you are currently doing")]
+    /// A list of tags showing what you are doing
     tags: Vec<String>,
 }
 
