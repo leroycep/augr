@@ -1,7 +1,7 @@
-use crate::{tags_at_time, Tag, Timesheet};
+use crate::timesheet::{Tag, Timesheet};
 use chrono::Utc;
-use structopt::StructOpt;
 use std::collections::HashSet;
+use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "week")]
@@ -12,7 +12,7 @@ pub struct ShowWeekCmd {
 
 impl ShowWeekCmd {
     pub fn exec(&self, timesheet: &Timesheet) {
-        let tags: HashSet<Tag> = self.tags.iter().map(|s| Tag(s.clone())).collect();
+        let tags: HashSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
         let today = chrono::Local::today();
         let now = chrono::Local::now();
@@ -32,7 +32,7 @@ impl ShowWeekCmd {
                 let hour = section / 3;
                 let minutes = (section % 3) * 20;
                 let cur_datetime = cur_date.and_hms(hour, minutes, 0);
-                let cur_tags = tags_at_time(timesheet, &cur_datetime.with_timezone(&Utc));
+                let cur_tags = timesheet.tags_at_time(&cur_datetime.with_timezone(&Utc));
                 let matches = cur_tags
                     .map(|x| tags.is_subset(x) && !x.is_empty())
                     .unwrap_or(false);

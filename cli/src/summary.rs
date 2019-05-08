@@ -1,4 +1,7 @@
-use crate::{format_duration, Tag, Timesheet};
+use crate::{
+    format_duration,
+    timesheet::{Tag, Timesheet},
+};
 use chrono::Utc;
 use std::collections::HashSet;
 use structopt::StructOpt;
@@ -21,8 +24,7 @@ impl SummaryCmd {
 
         let today = Utc::today();
         let mut t_iter = timesheet
-            .transitions
-            .iter()
+            .transitions()
             .filter(|x| x.0.date() == today)
             .filter(|x| x.1.is_superset(&tags))
             .peekable();

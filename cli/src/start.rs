@@ -1,4 +1,4 @@
-use crate::{Tag, Timesheet};
+use crate::timesheet::{Tag, Timesheet};
 use chrono::Utc;
 use std::collections::HashSet;
 use structopt::StructOpt;
@@ -12,8 +12,8 @@ pub struct StartCmd {
 impl StartCmd {
     pub fn exec(&self, timesheet: &mut Timesheet) {
         let now = Utc::now();
-        let tags: HashSet<Tag> = self.tags.iter().map(|s| Tag(s.clone())).collect();
+        let tags: HashSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
-        timesheet.transitions.insert(now, tags);
+        timesheet.insert_transition(now, tags);
     }
 }
