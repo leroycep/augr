@@ -1,6 +1,7 @@
 mod show_week;
 mod start;
 mod summary;
+mod tags;
 mod timesheet;
 
 use structopt::StructOpt;
@@ -23,6 +24,9 @@ enum Command {
 
     #[structopt(name = "week")]
     Week(show_week::ShowWeekCmd),
+
+    #[structopt(name = "tags")]
+    Tags(tags::TagsCmd),
 }
 
 fn main() {
@@ -37,6 +41,7 @@ fn main() {
         Command::Start(subcmd) => subcmd.exec(&mut timesheet),
         Command::Summary(subcmd) => subcmd.exec(&timesheet),
         Command::Week(subcmd) => subcmd.exec(&timesheet),
+        Command::Tags(subcmd) => subcmd.exec(&timesheet),
     }
 
     save_timesheet(&data_file, &timesheet);
