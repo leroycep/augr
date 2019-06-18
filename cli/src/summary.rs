@@ -2,7 +2,7 @@ use crate::{
     format_duration,
     timesheet::{Tag, Timesheet},
 };
-use chrono::Utc;
+use chrono::Local;
 use std::collections::HashSet;
 use structopt::StructOpt;
 
@@ -22,9 +22,10 @@ impl SummaryCmd {
     pub fn exec(&self, timesheet: &Timesheet) {
         let tags: HashSet<Tag> = self.tags.iter().map(|s| Tag(s.clone())).collect();
 
-        let today = Utc::today();
+        let today = Local::today();
         let mut t_iter = timesheet
             .transitions()
+            .map(|x| (x.0.with_timezone(&Local), x.1))
             .filter(|x| x.0.date() == today)
             .filter(|x| x.1.is_superset(&tags))
             .peekable();
@@ -37,7 +38,7 @@ impl SummaryCmd {
         );
         while let Some(t) = t_iter.next() {
             let start_time = t.0.with_timezone(&chrono::Local).format("%H:%M");
-            let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Utc::now());
+            let next_time = t_iter.peek().map(|x| x.0.clone()).unwrap_or(Local::now());
             let tags_str =
                 t.1.iter()
                     .fold(String::new(), |acc, x| format!("{} {}", acc, x.0));
