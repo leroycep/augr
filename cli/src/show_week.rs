@@ -1,5 +1,5 @@
 use crate::timesheet::{Tag, Timesheet};
-use chrono::{offset::TimeZone, Date, Local, NaiveDate, Utc};
+use chrono::{offset::TimeZone, Local, NaiveDate, Utc};
 use std::collections::HashSet;
 use structopt::StructOpt;
 
@@ -11,17 +11,23 @@ pub struct ShowWeekCmd {
 
     #[structopt(long = "start")]
     start: Option<NaiveDate>,
+
+    #[structopt(long = "end")]
+    end: Option<NaiveDate>,
 }
 
 impl ShowWeekCmd {
     pub fn exec(&self, timesheet: &Timesheet) {
         let tags: HashSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
-        let today = chrono::Local::today();
         let now = chrono::Local::now();
+        let end_date = match self.end {
+            Some(naive_date) => Local.from_local_date(&naive_date).unwrap(),
+            None => chrono::Local::today(),
+        };
         let start_date = match self.start {
             Some(naive_date) => Local.from_local_date(&naive_date).unwrap(),
-            None => today - chrono::Duration::days(6),
+            None => end_date - chrono::Duration::days(6),
         };
 
         let mut cur_date = start_date;
@@ -32,7 +38,7 @@ impl ShowWeekCmd {
         }
         println!();
 
-        while cur_date <= today {
+        while cur_date <= end_date {
             print!("{} ", cur_date.format("%a"));
             for section in 0..(24 * 3) {
                 let hour = section / 3;
@@ -43,6 +49,7 @@ impl ShowWeekCmd {
                     .map(|x| tags.is_subset(x) && !x.is_empty())
                     .unwrap_or(false);
 
+                // Avoid highlighting the entire day
                 let in_past = cur_datetime <= now;
 
                 if matches && in_past {
