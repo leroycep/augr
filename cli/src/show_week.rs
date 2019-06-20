@@ -1,5 +1,5 @@
 use crate::timesheet::{Tag, Timesheet};
-use chrono::Utc;
+use chrono::{offset::TimeZone, Date, Local, NaiveDate, Utc};
 use std::collections::HashSet;
 use structopt::StructOpt;
 
@@ -8,6 +8,9 @@ use structopt::StructOpt;
 pub struct ShowWeekCmd {
     /// A list of tags to filter against
     tags: Vec<String>,
+
+    #[structopt(long = "start")]
+    start: Option<NaiveDate>,
 }
 
 impl ShowWeekCmd {
@@ -16,7 +19,10 @@ impl ShowWeekCmd {
 
         let today = chrono::Local::today();
         let now = chrono::Local::now();
-        let start_date = today - chrono::Duration::days(6);
+        let start_date = match self.start {
+            Some(naive_date) => Local.from_local_date(&naive_date).unwrap(),
+            None => today - chrono::Duration::days(6),
+        };
 
         let mut cur_date = start_date;
 
