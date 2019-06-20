@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
@@ -10,6 +10,14 @@ pub struct Timesheet {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Tag(pub String);
 
+#[derive(Clone, Debug)]
+pub struct Segment {
+    pub start_time: DateTime<Utc>,
+    pub tags: HashSet<Tag>,
+    pub duration: Duration,
+    pub end_time: DateTime<Utc>,
+}
+
 impl Timesheet {
     pub fn new() -> Timesheet {
         Self {
@@ -17,11 +25,33 @@ impl Timesheet {
         }
     }
 
-    pub fn transitions<'ts>(&'ts self) -> impl Iterator<Item=(&DateTime<Utc>, &HashSet<Tag>)> {
+    pub fn transitions<'ts>(&'ts self) -> impl Iterator<Item = (&DateTime<Utc>, &HashSet<Tag>)> {
         self.transitions.iter()
     }
 
-    pub fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: HashSet<Tag>) -> Option<HashSet<Tag>> {
+    pub fn segments(&self) -> Vec<Segment> {
+        let now = Utc::now();
+        let end_cap_arr = [now];
+        self.transitions
+            .iter()
+            .zip(self.transitions.keys().skip(1).chain(end_cap_arr.iter()))
+            .map(|(t, end_time)| {
+                let duration = end_time.signed_duration_since(*t.0);
+                Segment {
+                    start_time: t.0.clone(),
+                    tags: t.1.clone(),
+                    duration,
+                    end_time: end_time.clone(),
+                }
+            })
+            .collect()
+    }
+
+    pub fn insert_transition(
+        &mut self,
+        datetime: DateTime<Utc>,
+        tags: HashSet<Tag>,
+    ) -> Option<HashSet<Tag>> {
         self.transitions.insert(datetime, tags)
     }
 
