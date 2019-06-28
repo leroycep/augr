@@ -1,0 +1,2 @@
+[target.armv7-linux-androideabi]
+linker = "armv7a-unknown-linux-androideabi-clang"
