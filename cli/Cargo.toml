@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "time-tracker"
 version = "0.1.0"
 authors = ["LeRoyce Pearson <leroycepearson@geemili.xyz>"]
 edition = "2018"
