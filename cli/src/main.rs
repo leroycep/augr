@@ -1,3 +1,4 @@
+mod config;
 mod show_week;
 mod start;
 mod summary;
@@ -29,10 +30,13 @@ enum Command {
     Tags(tags::TagsCmd),
 }
 
-fn main() {
+fn main() -> Result<(), Box<std::error::Error>> {
     let opt = Opt::from_args();
 
     let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "timetracker").unwrap();
+    let conf_file = proj_dirs.config_dir().join("config.toml");
+
+    let conf = config::load_config(&conf_file)?;
     let data_file = proj_dirs.data_dir().join("timesheet.csv");
 
     let mut timesheet = load_timesheet(&data_file);
@@ -45,6 +49,8 @@ fn main() {
     }
 
     save_timesheet(&data_file, &timesheet);
+
+    Ok(())
 }
 
 fn format_duration(duration: chrono::Duration) -> String {
