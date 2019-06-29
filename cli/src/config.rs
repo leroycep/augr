@@ -1,6 +1,5 @@
 use serde::Deserialize;
-use snafu::ResultExt;
-use snafu::Snafu;
+use snafu::{ResultExt, Snafu};
 use std::{
     fs::read_to_string,
     io,
@@ -9,7 +8,7 @@ use std::{
 
 #[derive(Deserialize)]
 pub struct Conf {
-    pub sync_folder: String,
+    pub sync_folder: PathBuf,
     pub device_id: String,
 }
 
@@ -26,9 +25,7 @@ pub enum Error {
 }
 
 pub fn load_config(path: &Path) -> Result<Conf, Error> {
-    use std::io::Read;
-
-    let mut conf_str = read_to_string(path).context(ReadConfiguration { path })?;
+    let conf_str = read_to_string(path).context(ReadConfiguration { path })?;
 
     let conf = toml::de::from_str(&conf_str).context(InvalidConfiguration { path })?;
 
