@@ -37,9 +37,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let conf_file = proj_dirs.config_dir().join("config.toml");
 
     let conf = config::load_config(&conf_file)?;
-    let data_file = proj_dirs.data_dir().join("timesheet.csv");
+    let data_file = conf.sync_folder.join(conf.device_id).with_extension("unknown");
 
-    let mut timesheet = load_timesheet(&data_file);
+    let mut timesheet = load_timesheet(&data_file)?;
 
     match opt.cmd.unwrap_or(Command::default()) {
         Command::Start(subcmd) => subcmd.exec(&mut timesheet),
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
         Command::Tags(subcmd) => subcmd.exec(&timesheet),
     }
 
-    save_timesheet(&data_file, &timesheet);
+    save_timesheet(&data_file, &timesheet)?;
 
     Ok(())
 }
