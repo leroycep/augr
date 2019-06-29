@@ -1,4 +1,5 @@
 use crate::{
+    database::DataBase,
     format_duration,
     timesheet::{Tag, Timesheet},
 };

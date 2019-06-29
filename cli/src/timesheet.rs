@@ -1,3 +1,4 @@
+use crate::database::DataBase;
 use chrono::{DateTime, Duration, Utc};
 use snafu::{ResultExt, Snafu};
 use std::collections::{BTreeMap, HashSet};
@@ -29,42 +30,15 @@ impl Timesheet {
             transitions: BTreeMap::new(),
         }
     }
+}
 
-    pub fn transitions<'ts>(&'ts self) -> impl Iterator<Item = (&DateTime<Utc>, &HashSet<Tag>)> {
-        self.transitions.iter()
+impl DataBase for Timesheet {
+    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &HashSet<Tag>> {
+        self.transitions.iter().collect()
     }
 
-    pub fn segments(&self) -> Vec<Segment> {
-        let now = Utc::now();
-        let end_cap_arr = [now];
-        self.transitions
-            .iter()
-            .zip(self.transitions.keys().skip(1).chain(end_cap_arr.iter()))
-            .map(|(t, end_time)| {
-                let duration = end_time.signed_duration_since(*t.0);
-                Segment {
-                    start_time: t.0.clone(),
-                    tags: t.1.clone(),
-                    duration,
-                    end_time: end_time.clone(),
-                }
-            })
-            .collect()
-    }
-
-    pub fn insert_transition(
-        &mut self,
-        datetime: DateTime<Utc>,
-        tags: HashSet<Tag>,
-    ) -> Option<HashSet<Tag>> {
-        self.transitions.insert(datetime, tags)
-    }
-
-    pub fn tags_at_time<'ts>(&'ts self, datetime: &DateTime<Utc>) -> Option<&'ts HashSet<Tag>> {
-        self.transitions
-            .range(..datetime)
-            .map(|(_time, tags)| tags)
-            .last()
+    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: HashSet<Tag>) {
+        self.transitions.insert(datetime, tags);
     }
 }
 

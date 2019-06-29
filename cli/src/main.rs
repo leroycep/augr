@@ -1,4 +1,5 @@
 mod config;
+mod database;
 mod show_week;
 mod start;
 mod summary;
@@ -37,7 +38,10 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let conf_file = proj_dirs.config_dir().join("config.toml");
 
     let conf = config::load_config(&conf_file)?;
-    let data_file = conf.sync_folder.join(conf.device_id).with_extension("unknown");
+    let data_file = conf
+        .sync_folder
+        .join(conf.device_id)
+        .with_extension("unknown");
 
     let mut timesheet = load_timesheet(&data_file)?;
 

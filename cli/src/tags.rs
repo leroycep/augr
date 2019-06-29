@@ -1,4 +1,7 @@
-use crate::timesheet::{Tag, Timesheet};
+use crate::{
+    database::DataBase,
+    timesheet::{Tag, Timesheet},
+};
 use std::collections::HashSet;
 use structopt::StructOpt;
 
@@ -9,6 +12,7 @@ impl TagsCmd {
     pub fn exec(&self, timesheet: &Timesheet) {
         let tags: HashSet<Tag> = timesheet
             .transitions()
+            .iter()
             .fold(HashSet::new(), |acc, x| acc.union(x.1).cloned().collect());
 
         for tag in tags {

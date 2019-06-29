@@ -1,4 +1,7 @@
-use crate::timesheet::{Tag, Timesheet};
+use crate::{
+    database::DataBase,
+    timesheet::{Tag, Timesheet},
+};
 use chrono::Utc;
 use std::collections::HashSet;
 use structopt::StructOpt;
