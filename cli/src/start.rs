@@ -1,6 +1,6 @@
 use crate::{database::DataBase, timesheet::Tag};
 use chrono::Utc;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -12,7 +12,7 @@ pub struct StartCmd {
 impl StartCmd {
     pub fn exec<DB: DataBase>(&self, db: &mut DB) {
         let now = Utc::now();
-        let tags: HashSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
+        let tags: BTreeSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
         db.insert_transition(now, tags);
     }

@@ -1,7 +1,7 @@
 use crate::database::DataBase;
 use chrono::{DateTime, Duration, Utc};
 use snafu::{ResultExt, Snafu};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::{
     fs::read_to_string,
     io,
@@ -10,16 +10,16 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub struct Timesheet {
-    transitions: BTreeMap<DateTime<Utc>, HashSet<Tag>>,
+    transitions: BTreeMap<DateTime<Utc>, BTreeSet<Tag>>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Tag(pub String);
 
 #[derive(Clone, Debug)]
 pub struct Segment {
     pub start_time: DateTime<Utc>,
-    pub tags: HashSet<Tag>,
+    pub tags: BTreeSet<Tag>,
     pub duration: Duration,
     pub end_time: DateTime<Utc>,
 }
@@ -33,11 +33,11 @@ impl Timesheet {
 }
 
 impl DataBase for Timesheet {
-    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &HashSet<Tag>> {
+    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>> {
         self.transitions.iter().collect()
     }
 
-    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: HashSet<Tag>) {
+    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>) {
         self.transitions.insert(datetime, tags);
     }
 }

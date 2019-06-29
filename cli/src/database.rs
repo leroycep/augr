@@ -1,12 +1,12 @@
 use crate::timesheet::{Segment, Tag};
 use chrono::{DateTime, Utc};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub trait DataBase {
-    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &HashSet<Tag>>;
-    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: HashSet<Tag>);
+    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>>;
+    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>);
 
-    fn tags_at_time<'ts>(&'ts self, datetime: &DateTime<Utc>) -> Option<&'ts HashSet<Tag>> {
+    fn tags_at_time<'ts>(&'ts self, datetime: &DateTime<Utc>) -> Option<&'ts BTreeSet<Tag>> {
         self.transitions()
             .range::<DateTime<_>, _>(..datetime)
             .map(|(_time, tags)| *tags)

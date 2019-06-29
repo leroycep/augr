@@ -1,6 +1,6 @@
 use crate::{database::DataBase, timesheet::Tag};
 use chrono::{offset::TimeZone, Local, NaiveDate, Utc};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -18,7 +18,7 @@ pub struct ShowWeekCmd {
 
 impl ShowWeekCmd {
     pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
-        let tags: HashSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
+        let tags: BTreeSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
         let now = chrono::Local::now();
         let end_date = match self.end {

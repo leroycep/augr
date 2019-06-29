@@ -4,7 +4,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use snafu::{ResultExt, Snafu};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::{
     io::Error as IOError,
     path::{Path, PathBuf},
@@ -78,11 +78,11 @@ impl SyncFolderDB {
 }
 
 impl DataBase for SyncFolderDB {
-    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &HashSet<Tag>> {
+    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>> {
         self.global_timesheet.transitions()
     }
 
-    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: HashSet<Tag>) {
+    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>) {
         self.device_timesheet
             .insert_transition(datetime.clone(), tags.clone());
         self.global_timesheet.insert_transition(datetime, tags);
