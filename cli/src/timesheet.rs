@@ -1,6 +1,11 @@
 use chrono::{DateTime, Duration, Utc};
+use snafu::{ResultExt, Snafu};
 use std::collections::{BTreeMap, HashSet};
-use std::path::Path;
+use std::{
+    fs::read_to_string,
+    io,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug)]
 pub struct Timesheet {
@@ -69,32 +74,51 @@ impl From<String> for Tag {
     }
 }
 
-pub fn load_timesheet(path: &Path) -> Timesheet {
-    use std::io::Read;
+#[derive(Debug, Snafu)]
+pub enum Error {
+    #[snafu(display("Unable to read timesheet from {}: {}", path.display(), source))]
+    ReadTimesheet { source: io::Error, path: PathBuf },
 
+    #[snafu(display("Unable to write timesheet to {}: {}", path.display(), source))]
+    WriteTimesheet { source: io::Error, path: PathBuf },
+
+    #[snafu(display("{}:{} invalid datetime {}", path.display(), line_number, source))]
+    DateTimeParse {
+        source: chrono::format::ParseError,
+        path: PathBuf,
+        line_number: usize,
+    },
+}
+
+pub fn load_timesheet(path: &Path) -> Result<Timesheet, Error> {
     let mut timesheet = Timesheet::new();
     if !path.exists() {
-        return timesheet;
+        return Ok(timesheet);
     }
 
-    let mut rdr = std::fs::OpenOptions::new().read(true).open(path).unwrap();
-    let mut contents = String::new();
-    rdr.read_to_string(&mut contents).unwrap();
+    let contents = read_to_string(path).unwrap();
 
-    for line in contents.lines() {
+    for (line_number, line) in contents.lines().enumerate() {
         let mut cols = line.split(' ');
-        let time = cols.next().unwrap().parse().unwrap();
+        let time = cols
+            .next()
+            .unwrap()
+            .parse()
+            .context(DateTimeParse { line_number, path })?;
         let tags = cols.map(|x| Tag(x.into())).collect();
         timesheet.transitions.insert(time, tags);
     }
-    timesheet
+    Ok(timesheet)
 }
 
-pub fn save_timesheet(path: &Path, timesheet: &Timesheet) {
+pub fn save_timesheet(path: &Path, timesheet: &Timesheet) -> Result<(), Error> {
     use std::io::Write;
 
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    let mut wtr = std::fs::OpenOptions::new().write(true).open(path).unwrap();
+    let mut wtr = std::fs::OpenOptions::new()
+        .write(true)
+        .open(path)
+        .context(WriteTimesheet { path })?;
 
     for (start_time, tags) in timesheet.transitions.iter() {
         write!(wtr, "{}", start_time.to_rfc3339()).unwrap();
@@ -104,4 +128,6 @@ pub fn save_timesheet(path: &Path, timesheet: &Timesheet) {
         wtr.write(b"\n").unwrap();
     }
     wtr.flush().unwrap();
+
+    Ok(())
 }
