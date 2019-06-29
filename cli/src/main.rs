@@ -7,10 +7,11 @@ mod sync_folder_db;
 mod tags;
 mod timesheet;
 
+use snafu::{ErrorCompat, ResultExt, Snafu};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "timetrack")]
+#[structopt(name = "time-tracker")]
 struct Opt {
     #[structopt(subcommand)]
     cmd: Option<Command>,
@@ -31,15 +32,40 @@ enum Command {
     Tags(tags::TagsCmd),
 }
 
-fn main() -> Result<(), Box<std::error::Error>> {
+#[derive(Debug, Snafu)]
+pub enum Error {
+    #[snafu(display("Error getting config: {}", source))]
+    GetConfig { source: config::Error },
+
+    #[snafu(display("Error reading data: {}", source))]
+    ReadData { source: sync_folder_db::Error },
+
+    #[snafu(display("Error writing data: {}", source))]
+    WriteData { source: sync_folder_db::Error },
+}
+
+fn main() {
+    match run() {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("An error occured: {}", e);
+            if let Some(backtrace) = ErrorCompat::backtrace(&e) {
+                eprintln!("{}", backtrace);
+            }
+        }
+    }
+}
+
+fn run() -> Result<(), Error> {
     let opt = Opt::from_args();
 
-    let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "timetracker").unwrap();
+    let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "time-tracker").unwrap();
     let conf_file = proj_dirs.config_dir().join("config.toml");
 
-    let conf = config::load_config(&conf_file)?;
+    let conf = config::load_config(&conf_file).context(GetConfig {})?;
 
-    let mut db = sync_folder_db::SyncFolderDB::load(&conf.sync_folder, conf.device_id)?;
+    let mut db = sync_folder_db::SyncFolderDB::load(&conf.sync_folder, conf.device_id)
+        .context(ReadData {})?;
 
     match opt.cmd.unwrap_or(Command::default()) {
         Command::Start(subcmd) => subcmd.exec(&mut db),
@@ -48,7 +74,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
         Command::Tags(subcmd) => subcmd.exec(&db),
     }
 
-    db.save()?;
+    db.save().context(WriteData {})?;
 
     Ok(())
 }
