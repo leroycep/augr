@@ -1,7 +1,4 @@
-use crate::{
-    database::DataBase,
-    timesheet::{Tag, Timesheet},
-};
+use crate::{database::DataBase, timesheet::Tag};
 use std::collections::HashSet;
 use structopt::StructOpt;
 
@@ -9,7 +6,7 @@ use structopt::StructOpt;
 pub struct TagsCmd {}
 
 impl TagsCmd {
-    pub fn exec(&self, timesheet: &Timesheet) {
+    pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
         let tags: HashSet<Tag> = timesheet
             .transitions()
             .iter()

@@ -81,17 +81,6 @@ pub fn load_transitions(path: &Path, timesheet: &mut Timesheet) -> Result<(), Er
     Ok(())
 }
 
-pub fn load_timesheet(path: &Path) -> Result<Timesheet, Error> {
-    let mut timesheet = Timesheet::new();
-    if !path.exists() {
-        return Ok(timesheet);
-    }
-
-    load_transitions(path, &mut timesheet)?;
-
-    Ok(timesheet)
-}
-
 pub fn save_timesheet(path: &Path, timesheet: &Timesheet) -> Result<(), Error> {
     use std::io::Write;
 
