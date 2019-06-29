@@ -3,6 +3,7 @@ mod database;
 mod show_week;
 mod start;
 mod summary;
+mod sync_folder_db;
 mod tags;
 mod timesheet;
 

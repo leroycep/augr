@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Timesheet {
     transitions: BTreeMap<DateTime<Utc>, HashSet<Tag>>,
 }
@@ -64,13 +64,8 @@ pub enum Error {
     },
 }
 
-pub fn load_timesheet(path: &Path) -> Result<Timesheet, Error> {
-    let mut timesheet = Timesheet::new();
-    if !path.exists() {
-        return Ok(timesheet);
-    }
-
-    let contents = read_to_string(path).unwrap();
+pub fn load_transitions(path: &Path, timesheet: &mut Timesheet) -> Result<(), Error> {
+    let contents = read_to_string(path).context(ReadTimesheet { path })?;
 
     for (line_number, line) in contents.lines().enumerate() {
         let mut cols = line.split(' ');
@@ -82,6 +77,18 @@ pub fn load_timesheet(path: &Path) -> Result<Timesheet, Error> {
         let tags = cols.map(|x| Tag(x.into())).collect();
         timesheet.transitions.insert(time, tags);
     }
+
+    Ok(())
+}
+
+pub fn load_timesheet(path: &Path) -> Result<Timesheet, Error> {
+    let mut timesheet = Timesheet::new();
+    if !path.exists() {
+        return Ok(timesheet);
+    }
+
+    load_transitions(path, &mut timesheet)?;
+
     Ok(timesheet)
 }
 
