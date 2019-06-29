@@ -1,7 +1,4 @@
-use crate::{
-    format_duration,
-    timesheet::{Tag, Timesheet},
-};
+use crate::{database::DataBase, format_duration, timesheet::Tag};
 use chrono::{DateTime, Local};
 use std::collections::HashSet;
 use structopt::StructOpt;
@@ -19,7 +16,7 @@ pub struct SummaryCmd {
 }
 
 impl SummaryCmd {
-    pub fn exec(&self, timesheet: &Timesheet) {
+    pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
         let tags: HashSet<Tag> = self.tags.iter().map(|s| Tag(s.clone())).collect();
 
         let start = self.start.unwrap_or(default_start());

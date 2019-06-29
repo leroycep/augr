@@ -1,11 +1,13 @@
+mod config;
+mod database;
 mod show_week;
 mod start;
 mod summary;
+mod sync_folder_db;
 mod tags;
 mod timesheet;
 
 use structopt::StructOpt;
-use timesheet::{load_timesheet, save_timesheet};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "timetrack")]
@@ -29,22 +31,26 @@ enum Command {
     Tags(tags::TagsCmd),
 }
 
-fn main() {
+fn main() -> Result<(), Box<std::error::Error>> {
     let opt = Opt::from_args();
 
     let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "timetracker").unwrap();
-    let data_file = proj_dirs.data_dir().join("timesheet.csv");
+    let conf_file = proj_dirs.config_dir().join("config.toml");
 
-    let mut timesheet = load_timesheet(&data_file);
+    let conf = config::load_config(&conf_file)?;
+
+    let mut db = sync_folder_db::SyncFolderDB::load(&conf.sync_folder, conf.device_id)?;
 
     match opt.cmd.unwrap_or(Command::default()) {
-        Command::Start(subcmd) => subcmd.exec(&mut timesheet),
-        Command::Summary(subcmd) => subcmd.exec(&timesheet),
-        Command::Week(subcmd) => subcmd.exec(&timesheet),
-        Command::Tags(subcmd) => subcmd.exec(&timesheet),
+        Command::Start(subcmd) => subcmd.exec(&mut db),
+        Command::Summary(subcmd) => subcmd.exec(&db),
+        Command::Week(subcmd) => subcmd.exec(&db),
+        Command::Tags(subcmd) => subcmd.exec(&db),
     }
 
-    save_timesheet(&data_file, &timesheet);
+    db.save()?;
+
+    Ok(())
 }
 
 fn format_duration(duration: chrono::Duration) -> String {

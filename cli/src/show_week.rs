@@ -1,4 +1,4 @@
-use crate::timesheet::{Tag, Timesheet};
+use crate::{database::DataBase, timesheet::Tag};
 use chrono::{offset::TimeZone, Local, NaiveDate, Utc};
 use std::collections::HashSet;
 use structopt::StructOpt;
@@ -17,7 +17,7 @@ pub struct ShowWeekCmd {
 }
 
 impl ShowWeekCmd {
-    pub fn exec(&self, timesheet: &Timesheet) {
+    pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
         let tags: HashSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
         let now = chrono::Local::now();
