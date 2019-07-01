@@ -36,22 +36,15 @@ impl SummaryCmd {
             "――――― ――――― ―――――――― ――――――――  ――――――――"
         );
         for segment in segments {
-            let date = segment.start_time.date();
-            let date_str = if current_date != Some(date) {
-                current_date = Some(date);
-                segment
-                    .start_time
-                    .date()
-                    .with_timezone(&chrono::Local)
-                    .format("%m/%d")
-                    .to_string()
+            let seg_datetime = segment.start_time.with_timezone(&chrono::Local);
+            let seg_date = seg_datetime.date();
+            let date_str = if current_date != Some(seg_date) {
+                current_date = Some(seg_date);
+                seg_date.format("%m/%d").to_string()
             } else {
                 String::from("     ")
             };
-            let start_time = segment
-                .start_time
-                .with_timezone(&chrono::Local)
-                .format("%H:%M");
+            let start_time = seg_datetime.format("%H:%M");
             let tags_str = segment
                 .tags
                 .iter()
