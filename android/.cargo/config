@@ -1,0 +1,6 @@
+[target.armv7-linux-androideabi]
+ar = "armv7a-unknown-linux-androideabi-ar"
+linker = "armv7a-unknown-linux-androideabi-cc"
+
+[target.arm-linux-androideabi]
+linker = "armv7a-unknown-linux-androideabi-clang"
