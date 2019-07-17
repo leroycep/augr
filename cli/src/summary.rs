@@ -1,4 +1,4 @@
-use crate::{database::DataBase, format_duration, timesheet::Tag};
+use crate::{database::DataBase, format_duration, time_input::parse_default_local, timesheet::Tag};
 use chrono::{DateTime, Local};
 use std::collections::BTreeSet;
 use structopt::StructOpt;
@@ -8,7 +8,7 @@ pub struct SummaryCmd {
     /// A list of tags to filter against
     tags: Vec<String>,
 
-    #[structopt(long = "start")]
+    #[structopt(long = "start", parse(try_from_os_str = "parse_default_local"))]
     start: Option<DateTime<Local>>,
 
     #[structopt(long = "end")]

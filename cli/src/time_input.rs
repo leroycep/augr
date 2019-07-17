@@ -1,4 +1,5 @@
-use chrono::{Date, DateTime, Datelike, Duration, NaiveTime, TimeZone};
+use chrono::{Date, DateTime, Datelike, Duration, Local, NaiveTime, TimeZone};
+use std::ffi::{OsStr, OsString};
 
 pub trait Context {
     type TZ: TimeZone;
@@ -13,6 +14,25 @@ macro_rules! attempt {
             Err(e) => e,
         }
     };
+}
+
+pub fn parse_default_local(text: &OsStr) -> Result<DateTime<Local>, OsString> {
+    let text = text
+        .to_str()
+        .ok_or_else(|| OsString::from("OsStr was not a valid rust string"))?;
+    struct LocalContext(DateTime<Local>);
+    impl Context for LocalContext {
+        type TZ = Local;
+        fn tz(&self) -> &Self::TZ {
+            &Local
+        }
+        fn now(&self) -> &DateTime<Self::TZ> {
+            &self.0
+        }
+    }
+
+    let c = LocalContext(Local::now());
+    parse(&c, text).map_err(|_| OsString::from("No valid date, time, or duration was found"))
 }
 
 pub fn parse<C: Context>(c: &C, text: &str) -> Result<DateTime<C::TZ>, ()> {
