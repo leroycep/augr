@@ -5,6 +5,7 @@ mod start;
 mod summary;
 mod sync_folder_db;
 mod tags;
+mod time_input;
 mod timesheet;
 
 use snafu::{ErrorCompat, ResultExt, Snafu};
