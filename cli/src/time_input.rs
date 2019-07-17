@@ -32,7 +32,7 @@ pub fn parse<C: Context>(c: &C, text: &str) -> Result<DateTime<C::TZ>, ()> {
         }
         Err(_) => {}
     }
-    match dbg!(::parse_duration::parse(text)).map(Duration::from_std) {
+    match ::parse_duration::parse(text).map(Duration::from_std) {
         Ok(Ok(duration)) => return Ok(c.now().clone() - duration),
         _ => {}
     }
@@ -101,7 +101,6 @@ mod fmts {
     ];
 
     pub const PARTIAL_DATE: &[Item] = &[
-        Item::Literal("--"),
         Item::Numeric(Month, Pad::None),
         Item::Literal("-"),
         Item::Numeric(Day, Pad::None),
@@ -156,7 +155,7 @@ mod test {
     fn just_the_month_and_day_no_padding() {
         assert_eq!(
             Ok(Utc.ymd(2019, 7, 6).and_hms(0, 0, 0)),
-            parse(&DummyContext::new(), "--7-6")
+            parse(&DummyContext::new(), "7-6")
         );
     }
 
@@ -164,7 +163,7 @@ mod test {
     fn just_the_month_and_day() {
         assert_eq!(
             Ok(Utc.ymd(2019, 07, 16).and_hms(0, 0, 0)),
-            parse(&DummyContext::new(), "--07-16")
+            parse(&DummyContext::new(), "07-16")
         );
     }
 
