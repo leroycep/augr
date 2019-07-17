@@ -1,17 +1,9 @@
-use chrono::{Date, DateTime, Datelike, NaiveTime, TimeZone, Utc};
-
-use snafu::{ErrorCompat, ResultExt, Snafu};
+use chrono::{Date, DateTime, Datelike, Duration, NaiveTime, TimeZone};
 
 pub trait Context {
     type TZ: TimeZone;
     fn tz(&self) -> &Self::TZ;
     fn now(&self) -> &DateTime<Self::TZ>;
-}
-
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Failed to parse datetime: {}", source))]
-    DateTimeParseError { source: chrono::format::ParseError },
 }
 
 macro_rules! attempt {
@@ -30,8 +22,19 @@ pub fn parse<C: Context>(c: &C, text: &str) -> Result<DateTime<C::TZ>, ()> {
         Err(_) => {}
     }
     match parse_time(c, text) {
-        Ok(time) => return Ok(c.now().date().and_time(time).unwrap()),
+        Ok(time) => {
+            if time <= c.now().time() {
+                return Ok(c.now().date().and_time(time).unwrap());
+            } else {
+                let yesterday = c.now().date() - Duration::days(1);
+                return Ok(yesterday.and_time(time).unwrap());
+            }
+        }
         Err(_) => {}
+    }
+    match dbg!(::parse_duration::parse(text)).map(Duration::from_std) {
+        Ok(Ok(duration)) => return Ok(c.now().clone() - duration),
+        _ => {}
     }
     Err(())
 }
@@ -65,10 +68,10 @@ fn parse_date<C: Context>(c: &C, text: &str) -> Result<Date<C::TZ>, ()> {
     Err(())
 }
 
-fn parse_time<C: Context>(c: &C, text: &str) -> Result<NaiveTime, ()> {
+fn parse_time<C: Context>(_c: &C, text: &str) -> Result<NaiveTime, ()> {
     match format_parse(fmts::HOUR_AND_MINUTE, text) {
         Ok(mut parsed) => {
-            parsed.set_second(0);
+            let _ = parsed.set_second(0);
             return parsed.to_naive_time().map_err(|_| ());
         }
         Err(_) => {}
@@ -170,6 +173,30 @@ mod test {
         assert_eq!(
             Ok(Utc.ymd(2019, 07, 16).and_hms(19, 25, 0)),
             parse(&DummyContext::new(), "19:25")
+        );
+    }
+
+    #[test]
+    fn time_from_yesterday() {
+        assert_eq!(
+            Ok(Utc.ymd(2019, 07, 15).and_hms(20, 00, 0)),
+            parse(&DummyContext::new(), "20:00")
+        );
+    }
+
+    #[test]
+    fn duration_20minutes() {
+        assert_eq!(
+            Ok(Utc.ymd(2019, 07, 16).and_hms(19, 05, 0)),
+            parse(&DummyContext::new(), "20min")
+        );
+    }
+
+    #[test]
+    fn duration_1hour_12minutes() {
+        assert_eq!(
+            Ok(Utc.ymd(2019, 07, 16).and_hms(18, 13, 0)),
+            parse(&DummyContext::new(), "1hr12min")
         );
     }
 }
