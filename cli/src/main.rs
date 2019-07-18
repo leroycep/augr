@@ -12,7 +12,7 @@ use snafu::{ErrorCompat, ResultExt, Snafu};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "time-tracker")]
+#[structopt(name = "augr")]
 struct Opt {
     #[structopt(subcommand)]
     cmd: Option<Command>,

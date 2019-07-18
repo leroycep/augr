@@ -27,6 +27,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "augr-cli"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "directories 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parse_duration 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
+ "snafu 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "autocfg"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -414,19 +427,6 @@ dependencies = [
  "libc 0.2.54 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_syscall 0.1.54 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "time-tracker"
-version = "0.1.0"
-dependencies = [
- "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "directories 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "parse_duration 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
- "snafu 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

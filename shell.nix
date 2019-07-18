@@ -2,7 +2,7 @@
 with pkgs;
 
 stdenv.mkDerivation {
-  name = "time-tracker-env";
+  name = "augr-env";
   buildInputs = [
     git
     rustChannels.stable.rust

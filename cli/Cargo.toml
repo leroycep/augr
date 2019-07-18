@@ -1,8 +1,17 @@
 [package]
-name = "time-tracker"
+name = "augr-cli"
 version = "0.1.0"
 authors = ["LeRoyce Pearson <leroycepearson@geemili.xyz>"]
 edition = "2018"
+license = "GPL-3.0-or-later"
+description = "A simple command line time tracking application"
+repository = "https://github.com/geemili/augr"
+keywords = ["cli", "timetracking"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "augr"
+path = "src/main.rs"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
