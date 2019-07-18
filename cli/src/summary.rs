@@ -11,7 +11,7 @@ pub struct SummaryCmd {
     #[structopt(long = "start", parse(try_from_os_str = "parse_default_local"))]
     start: Option<DateTime<Local>>,
 
-    #[structopt(long = "end")]
+    #[structopt(long = "end", parse(try_from_os_str = "parse_default_local"))]
     end: Option<DateTime<Local>>,
 }
 
