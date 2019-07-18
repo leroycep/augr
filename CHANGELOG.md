@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Convinent ways to specify date and time
 - Multi device synchronization through any file synchronization service
 - Termux support through cross compilation
 - Control time range of `summary` and `week` commands with `--start` and `--end`
