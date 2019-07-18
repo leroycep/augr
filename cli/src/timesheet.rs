@@ -67,6 +67,10 @@ pub enum Error {
 pub fn load_transitions(path: &Path, timesheet: &mut Timesheet) -> Result<(), Error> {
     let contents = read_to_string(path).context(ReadTimesheet { path })?;
 
+    if contents.trim() == "" {
+        return Ok(());
+    }
+
     for (line_number, line) in contents.lines().enumerate() {
         let mut cols = line.split(' ');
         let time = cols
