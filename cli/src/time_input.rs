@@ -60,6 +60,10 @@ pub fn parse<C: Context>(c: &C, text: &str) -> Result<DateTime<C::TZ>, ()> {
 }
 
 fn parse_datetime<T: TimeZone>(tz: &T, text: &str) -> Result<DateTime<T>, ()> {
+    match DateTime::parse_from_rfc3339(text) {
+        Ok(datetime) => return Ok(datetime.with_timezone(tz)),
+        Err(_) => {}
+    }
     attempt!(tz.datetime_from_str(text, "%Y-%m-%dT%H:%M:%S"));
     Err(())
 }
@@ -157,6 +161,14 @@ mod test {
 
     #[test]
     fn full_datetime() {
+        assert_eq!(
+            Ok(Utc.ymd(2019, 07, 16).and_hms(19, 25, 0)),
+            parse(&DummyContext::new(), "2019-07-16T14:25:00-05:00")
+        );
+    }
+
+    #[test]
+    fn datetime_no_timezone() {
         assert_eq!(
             Ok(Utc.ymd(2019, 07, 16).and_hms(19, 25, 0)),
             parse(&DummyContext::new(), "2019-07-16T19:25:00")
