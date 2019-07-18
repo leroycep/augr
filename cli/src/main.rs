@@ -60,7 +60,7 @@ fn main() {
 fn run() -> Result<(), Error> {
     let opt = Opt::from_args();
 
-    let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "time-tracker").unwrap();
+    let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "augr").unwrap();
     let conf_file = proj_dirs.config_dir().join("config.toml");
 
     let conf = config::load_config(&conf_file).context(GetConfig {})?;
