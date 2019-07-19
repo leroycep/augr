@@ -32,4 +32,3 @@ pub trait DataBase {
             .collect()
     }
 }
-

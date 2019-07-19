@@ -91,6 +91,7 @@ pub fn save_timesheet(path: &Path, timesheet: &Timesheet) -> Result<(), Error> {
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     let mut wtr = std::fs::OpenOptions::new()
         .write(true)
+        .create(true)
         .open(path)
         .context(WriteTimesheet { path })?;
 

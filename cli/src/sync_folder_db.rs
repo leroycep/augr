@@ -41,9 +41,11 @@ impl SyncFolderDB {
         let sync_folder = sync_folder.to_path_buf();
         let mut device_timesheet = Timesheet::new();
 
-        load_transitions(&device_path, &mut device_timesheet).context(ReadFile {
-            path: device_path.to_path_buf(),
-        })?;
+        if device_path.exists() {
+            load_transitions(&device_path, &mut device_timesheet).context(ReadFile {
+                path: device_path.to_path_buf(),
+            })?;
+        }
 
         let mut db = SyncFolderDB {
             sync_folder,
