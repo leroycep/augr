@@ -8,7 +8,7 @@ pub struct TagsCmd {}
 impl TagsCmd {
     pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
         let tags: BTreeSet<Tag> = timesheet
-            .transitions()
+            .events()
             .iter()
             .fold(BTreeSet::new(), |acc, x| acc.union(x.1).cloned().collect());
 

@@ -10,7 +10,7 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub struct Timesheet {
-    transitions: BTreeMap<DateTime<Utc>, BTreeSet<Tag>>,
+    events: BTreeMap<DateTime<Utc>, BTreeSet<Tag>>,
 }
 
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -27,18 +27,18 @@ pub struct Segment {
 impl Timesheet {
     pub fn new() -> Timesheet {
         Self {
-            transitions: BTreeMap::new(),
+            events: BTreeMap::new(),
         }
     }
 }
 
 impl DataBase for Timesheet {
-    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>> {
-        self.transitions.iter().collect()
+    fn events(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>> {
+        self.events.iter().collect()
     }
 
-    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>) {
-        self.transitions.insert(datetime, tags);
+    fn insert_event(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>) {
+        self.events.insert(datetime, tags);
     }
 }
 
@@ -64,7 +64,7 @@ pub enum Error {
     },
 }
 
-pub fn load_transitions(path: &Path, timesheet: &mut Timesheet) -> Result<(), Error> {
+pub fn load_events(path: &Path, timesheet: &mut Timesheet) -> Result<(), Error> {
     let contents = read_to_string(path).context(ReadTimesheet { path })?;
 
     if contents.trim() == "" {
@@ -79,7 +79,7 @@ pub fn load_transitions(path: &Path, timesheet: &mut Timesheet) -> Result<(), Er
             .parse()
             .context(DateTimeParse { line_number, path })?;
         let tags = cols.map(|x| Tag(x.into())).collect();
-        timesheet.transitions.insert(time, tags);
+        timesheet.events.insert(time, tags);
     }
 
     Ok(())
@@ -95,7 +95,7 @@ pub fn save_timesheet(path: &Path, timesheet: &Timesheet) -> Result<(), Error> {
         .open(path)
         .context(WriteTimesheet { path })?;
 
-    for (start_time, tags) in timesheet.transitions.iter() {
+    for (start_time, tags) in timesheet.events.iter() {
         write!(wtr, "{}", start_time.to_rfc3339()).unwrap();
         for t in tags {
             write!(wtr, " {}", t.0).unwrap();

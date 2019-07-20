@@ -21,6 +21,6 @@ impl StartCmd {
             .unwrap_or(Utc::now());
         let tags: BTreeSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
-        db.insert_transition(now, tags);
+        db.insert_event(now, tags);
     }
 }

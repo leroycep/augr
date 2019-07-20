@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `--time` argument to `start` command
 
+### Changed
+- `Transitions` are now known as `Events`
+
 ## [0.1.1] - 2019-07-18
 ### Fixed
 - Empty device files will no longer cause `augr` to crash
