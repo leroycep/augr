@@ -43,7 +43,7 @@ Date  Start Duration Total     Tags
 The `summary` subcommand has `--start` and `--end` arguments which take a time
 that may be specified using several different methods.
 
-### DateTime
+#### DateTime
 
 DateTimes conforming to [RFC 3339][rfc3339] are allowed. The time zone may be
 excluded, and the systems Local time zone will be used.
@@ -62,7 +62,7 @@ $ augr summary --start 2019-07-01T12:00:00-05:00 --end 2019-07-01T23:00:00-05:00
 
 [rfc3339]: https://en.wikipedia.org/wiki/ISO_8601
 
-### Date
+#### Date
 
 If you don't the time on a date, it will assume that you mean midnight
 (`00:00:00`) in your local timezone. This is useful for getting a summary of
@@ -80,7 +80,7 @@ $ # What was I doing in the afternoon on July 4th, 2019, to July 5th, 2019?
 $ augr summary --start 7-4 --end 7-6
 ```
 
-### Time
+#### Time
 
 You may also omit the date, and just write the hour and minute.
 
@@ -89,7 +89,7 @@ $ # What have I done since 16:00 today?
 $ augr summary --start 16:00
 ```
 
-### Duration
+#### Duration
 
 Writing a duration will subtract it from the current time. The [`parse_duration`]
 crate is used, which supports the standard set by [systemd.time] and more.
