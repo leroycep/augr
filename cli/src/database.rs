@@ -3,11 +3,11 @@ use chrono::{DateTime, Utc};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub trait DataBase {
-    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>>;
-    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>);
+    fn events(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>>;
+    fn insert_event(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>);
 
     fn tags_at_time<'ts>(&'ts self, datetime: &DateTime<Utc>) -> Option<&'ts BTreeSet<Tag>> {
-        self.transitions()
+        self.events()
             .range::<DateTime<_>, _>(..datetime)
             .map(|(_time, tags)| *tags)
             .last()
@@ -16,10 +16,10 @@ pub trait DataBase {
     fn segments(&self) -> Vec<Segment> {
         let now = Utc::now();
         let end_cap_arr = [&now];
-        let transitions = self.transitions();
-        transitions
+        let events = self.events();
+        events
             .iter()
-            .zip(transitions.keys().skip(1).chain(end_cap_arr.iter()))
+            .zip(events.keys().skip(1).chain(end_cap_arr.iter()))
             .map(|(t, end_time)| {
                 let duration = end_time.signed_duration_since(**t.0);
                 Segment {

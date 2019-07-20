@@ -1,6 +1,6 @@
 use crate::{
     database::DataBase,
-    timesheet::{load_transitions, save_timesheet, Tag, Timesheet},
+    timesheet::{load_events, save_timesheet, Tag, Timesheet},
 };
 use chrono::{DateTime, Utc};
 use snafu::{ResultExt, Snafu};
@@ -42,7 +42,7 @@ impl SyncFolderDB {
         let mut device_timesheet = Timesheet::new();
 
         if device_path.exists() {
-            load_transitions(&device_path, &mut device_timesheet).context(ReadFile {
+            load_events(&device_path, &mut device_timesheet).context(ReadFile {
                 path: device_path.to_path_buf(),
             })?;
         }
@@ -65,7 +65,7 @@ impl SyncFolderDB {
             if !path.is_file() {
                 continue;
             }
-            load_transitions(&path, &mut db.global_timesheet).context(ReadFile { path })?;
+            load_events(&path, &mut db.global_timesheet).context(ReadFile { path })?;
         }
 
         Ok(db)
@@ -80,13 +80,13 @@ impl SyncFolderDB {
 }
 
 impl DataBase for SyncFolderDB {
-    fn transitions(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>> {
-        self.global_timesheet.transitions()
+    fn events(&self) -> BTreeMap<&DateTime<Utc>, &BTreeSet<Tag>> {
+        self.global_timesheet.events()
     }
 
-    fn insert_transition(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>) {
+    fn insert_event(&mut self, datetime: DateTime<Utc>, tags: BTreeSet<Tag>) {
         self.device_timesheet
-            .insert_transition(datetime.clone(), tags.clone());
-        self.global_timesheet.insert_transition(datetime, tags);
+            .insert_event(datetime.clone(), tags.clone());
+        self.global_timesheet.insert_event(datetime, tags);
     }
 }

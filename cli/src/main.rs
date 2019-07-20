@@ -1,6 +1,6 @@
 mod config;
 mod database;
-mod show_week;
+mod chart;
 mod start;
 mod summary;
 mod sync_folder_db;
@@ -26,8 +26,8 @@ enum Command {
     #[structopt(name = "summary")]
     Summary(summary::SummaryCmd),
 
-    #[structopt(name = "week")]
-    Week(show_week::ShowWeekCmd),
+    #[structopt(name = "chart")]
+    Chart(chart::Cmd),
 
     #[structopt(name = "tags")]
     Tags(tags::TagsCmd),
@@ -71,7 +71,7 @@ fn run() -> Result<(), Error> {
     match opt.cmd.unwrap_or(Command::default()) {
         Command::Start(subcmd) => subcmd.exec(&mut db),
         Command::Summary(subcmd) => subcmd.exec(&db),
-        Command::Week(subcmd) => subcmd.exec(&db),
+        Command::Chart(subcmd) => subcmd.exec(&db),
         Command::Tags(subcmd) => subcmd.exec(&db),
     }
 
