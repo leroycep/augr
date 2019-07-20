@@ -38,6 +38,30 @@ Date  Start Duration Total     Tags
 07/20 13:00 0m       0m        reading
 ```
 
+You can filter the output of the summary by giving some tags to the `summary`
+subcommand:
+
+```sh
+$ augr summary
+Date  Start Duration Total     Tags
+――――― ――――― ―――――――― ――――――――  ――――――――
+06/29 06:33 54m      54m       blog augr
+      07:27 47m      1h 41m    blog
+      08:15 2h 51m   4h 33m    social-media
+      11:06 29m      5h 2m     food
+      11:36 1h 38m   6h 41m    coding augr
+      13:15 1h 31m   8h 12m    coding augr
+      14:46 8m       8h 20m    social
+      14:54 53m      9h 14m    augr
+$ augr summary augr
+Date  Start Duration Total     Tags
+――――― ――――― ―――――――― ――――――――  ――――――――
+06/29 06:33 54m      54m       blog augr
+      11:36 1h 38m   2h 33m    coding augr
+      13:15 1h 31m   4h 4m     coding augr
+      14:54 53m      4h 57m    augr
+```
+
 ### Specifying Dates and Times
 
 The `summary` subcommand has `--start` and `--end` arguments which take a time
