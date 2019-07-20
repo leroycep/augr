@@ -1,9 +1,13 @@
 # augr
 
-`augr` is a simple time tracking app, that is designed for one person
-to use across multiple devices.
+`augr` tracks your time, generates summaries, and syncs between devices using
+[Syncthing][].
 
 This project is heavily inspired by [timewarrior][].
+
+## Useful Links
+
+- [Official Matrix Chatroom](https://matrix.to/#/!RMSJfJyCNLxdOzbmQG:geemili.xyz?via=geemili.xyz&via=matrix.org)
 
 ## Setup
 
