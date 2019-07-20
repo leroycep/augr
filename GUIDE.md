@@ -92,7 +92,8 @@ $ augr summary --start 16:00
 ### Duration
 
 Writing a duration will subtract it from the current time. The [`parse_duration`]
-crate is used, which supports the standard set by [systemd.time] and more.
+crate is used, which supports the standard set by [systemd.time][systemd-time]
+and more.
 
 ```sh
 $ # Get a summary of the week
@@ -100,4 +101,4 @@ $ augr summary --start 1week
 ```
 
 [`parse_duration`]: https://crates.io/crates/parse_duration
-[systemd.time]: https://www.freedesktop.org/software/systemd/man/systemd.time.html#Parsing Time Spans
+[systemd-time]: https://www.freedesktop.org/software/systemd/man/systemd.time.html#Parsing Time Spans
