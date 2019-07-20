@@ -4,19 +4,21 @@ use std::collections::BTreeSet;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "week")]
-pub struct ShowWeekCmd {
+#[structopt(name = "chart")]
+pub struct Cmd {
     /// A list of tags to filter against
     tags: Vec<String>,
 
+    /// The date to start charting from. Defaults to 7 days ago.
     #[structopt(long = "start")]
     start: Option<NaiveDate>,
 
+    /// The date to stop charting at. Defaults to today.
     #[structopt(long = "end")]
     end: Option<NaiveDate>,
 }
 
-impl ShowWeekCmd {
+impl Cmd {
     pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
         let tags: BTreeSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 

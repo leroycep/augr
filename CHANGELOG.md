@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--time` argument to `start` command
 
 ### Changed
-- `Transitions` are now known as `Events`
+- `Transitions` renamed to `Events`
+- `week` command renamed to `chart`
 
 ## [0.1.1] - 2019-07-18
 ### Fixed
