@@ -1,8 +1,10 @@
 mod action;
+mod meta;
 mod patch;
 
-pub use action::{Action, ActionRef};
-pub use patch::Patch;
+pub use crate::action::{Action, ActionRef};
+pub use crate::meta::Meta;
+pub use crate::patch::{Patch, PatchRef};
 
 #[cfg(test)]
 mod tests {
