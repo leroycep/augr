@@ -1,15 +1,103 @@
-use crate::{Action, ActionRef};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 pub type PatchRef = String;
+type EventRef = String;
+pub type Tag = String;
 
 #[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct Patch {
     #[serde(default)]
-    parents: Vec<PatchRef>,
-    actions: HashMap<ActionRef, Action>,
+    add_start: Vec<AddStart>,
+
+    #[serde(default)]
+    remove_start: Vec<RemoveStart>,
+
+    #[serde(default)]
+    add_tag: Vec<AddTag>,
+
+    #[serde(default)]
+    remove_tag: Vec<RemoveTag>,
+
+    #[serde(default)]
+    create_event: Vec<CreateEvent>,
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub struct AddStart {
+    parent: PatchRef,
+    event: EventRef,
+    time: DateTime<Utc>,
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub struct RemoveStart {
+    patch: PatchRef,
+    event: EventRef,
+    time: DateTime<Utc>,
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub struct AddTag {
+    parent: PatchRef,
+    event: EventRef,
+    tag: Tag,
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub struct RemoveTag {
+    patch: PatchRef,
+    event: EventRef,
+    tag: Tag,
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+pub struct CreateEvent {
+    event: EventRef,
+    start: DateTime<Utc>,
+    tags: Vec<Tag>,
+}
+
+impl Patch {
+    pub fn new() -> Self {
+        Self {
+            add_start: Vec::new(),
+            remove_start: Vec::new(),
+            add_tag: Vec::new(),
+            remove_tag: Vec::new(),
+            create_event: Vec::new(),
+        }
+    }
+
+    pub fn add_start(&mut self, parent: PatchRef, event: EventRef, time: DateTime<Utc>) {
+        self.add_start.push(AddStart {
+            parent,
+            event,
+            time,
+        })
+    }
+
+    pub fn remove_start(&mut self, patch: PatchRef, event: EventRef, time: DateTime<Utc>) {
+        self.remove_start.push(RemoveStart { patch, event, time })
+    }
+
+    pub fn add_tag(&mut self, parent: PatchRef, event: EventRef, tag: String) {
+        self.add_tag.push(AddTag { parent, event, tag })
+    }
+
+    pub fn remove_tag(&mut self, patch: PatchRef, event: EventRef, tag: String) {
+        self.remove_tag.push(RemoveTag { patch, event, tag })
+    }
+
+    pub fn create_event(&mut self, event: EventRef, start: DateTime<Utc>, tags: Vec<String>) {
+        self.create_event.push(CreateEvent { event, start, tags })
+    }
 }
 
 #[cfg(test)]
@@ -17,91 +105,70 @@ mod test {
     use super::*;
     use chrono::offset::{TimeZone, Utc};
 
-    macro_rules! map(
-        { $($key:expr => $value:expr),+ } => {
+    macro_rules! s (
+        { $stuff:expr } => {
             {
-                let mut m = ::std::collections::HashMap::new();
-                $(
-                    m.insert($key.into(), $value);
-                )+
-                m
+                $stuff.to_string()
             }
          };
     );
 
     #[test]
-    fn read_standalone_single_action_patch_from_toml() {
-        let expected = Patch {
-            parents: vec![],
-            actions: map! {
-                "102" => Action::ModifyEvent {
-                    event_id: "101".to_string(),
-                    add_tags: None,
-                    delete_tags: None,
-                    set_start: Some(Utc.ymd(2019, 07, 24).and_hms(14, 00, 00)),
-                }
-            },
-        };
+    fn read_patch_with_create_event_toml() {
+        let mut expected = Patch::new();
+        expected.create_event(
+            s!("a"),
+            Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
+            vec![s!("work"), s!("coding")],
+        );
+
         let toml_str = r#"
-            [actions.102]
-            type = "modify-event"
-            event-id = "101"
-            set-start = "2019-07-24T14:00:00+00:00"
+            [[create-event]]
+            event = "a"
+            start = "2019-07-24T14:00:00+00:00"
+            tags = ["work", "coding"]
         "#;
         assert_eq!(toml::de::from_str(toml_str), Ok(expected));
     }
 
     #[test]
-    fn read_standalone_multi_action_patch_from_toml() {
-        let expected = Patch {
-            parents: vec![],
-            actions: map! {
-                "102" => Action::ModifyEvent {
-                    event_id: "101".to_string(),
-                    add_tags: None,
-                    delete_tags: None,
-                    set_start: Some(Utc.ymd(2019, 07, 24).and_hms(14, 00, 00)),
-                },
-                "103" => Action::CreateEvent {
-                    start: Utc.ymd(2019, 07, 24).and_hms(15, 00, 00),
-                    tags: vec!["travel".to_string()],
-                }
-            },
-        };
+    fn read_patch_with_all_fields_toml() {
+        let mut expected = Patch::new();
+        expected.add_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0));
+        expected.remove_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0));
+        expected.add_tag(s!("0"), s!("a"), s!("work"));
+        expected.remove_tag(s!("0"), s!("a"), s!("coding"));
+        expected.create_event(
+            s!("a"),
+            Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
+            vec![s!("work"), s!("coding")],
+        );
+
         let toml_str = r#"
-            [actions.102]
-            type = "modify-event"
-            event-id = "101"
-            set-start = "2019-07-24T14:00:00+00:00"
+            [[add-start]]
+            parent = "0"
+            event = "a"
+            time = "2019-07-24T14:00:00+00:00"
 
-            [actions.103]
-            type = "create-event"
-            start = "2019-07-24T15:00:00+00:00"
-            tags = ["travel"]
-        "#;
-        assert_eq!(toml::de::from_str(toml_str), Ok(expected));
-    }
+            [[remove-start]]
+            patch = "0"
+            event = "a"
+            time = "2019-07-24T14:00:00+00:00"
 
-    #[test]
-    fn read_patch_with_ancestors_from_toml() {
-        let expected = Patch {
-            parents: vec!["laptop-1".to_string()],
-            actions: map! {
-                "102" => Action::ModifyEvent {
-                    event_id: "101".to_string(),
-                    add_tags: None,
-                    delete_tags: None,
-                    set_start: Some(Utc.ymd(2019, 07, 24).and_hms(14, 00, 00)),
-                }
-            },
-        };
-        let toml_str = r#"
-            parents = [ "laptop-1" ]
+            [[add-tag]]
+            parent = "0"
+            event = "a"
+            tag = "work"
 
-            [actions.102]
-            type = "modify-event"
-            event-id = "101"
-            set-start = "2019-07-24T14:00:00+00:00"
+            [[remove-tag]]
+            patch = "0"
+            event = "a"
+            tag = "coding"
+
+            [[create-event]]
+            event = "a"
+            start = "2019-07-24T14:00:00+00:00"
+            tags = ["work", "coding"]
         "#;
         assert_eq!(toml::de::from_str(toml_str), Ok(expected));
     }
