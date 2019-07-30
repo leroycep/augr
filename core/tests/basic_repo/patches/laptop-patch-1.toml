@@ -1,0 +1,9 @@
+[[create-event]]
+event = "a"
+start = "2019-07-23T12:00:00+00:00"
+tags = ["lunch", "food"]
+
+[[create-event]]
+event = "b"
+start = "2019-07-23T13:00:00+00:00"
+tags = ["work"]

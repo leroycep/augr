@@ -1,0 +1,20 @@
+[[remove-start]]
+patch = "laptop-patch-1"
+event = "a"
+time = "2019-07-23T12:00:00+00:00"
+
+[[add-start]]
+parent = "laptop-patch-1"
+event = "a"
+time = "2019-07-23T12:30:00+00:00"
+
+[[remove-tag]]
+patch = "laptop-patch-1"
+event = "a"
+tag = "food"
+
+[[add-tag]]
+parent = "laptop-patch-1"
+event = "b"
+tag = "awesome-project"
+

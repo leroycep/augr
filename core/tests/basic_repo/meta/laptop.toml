@@ -1,0 +1,4 @@
+patches = [
+	"laptop-1",
+	"laptop-2",
+]

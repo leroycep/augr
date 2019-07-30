@@ -4,27 +4,28 @@ use serde::{Deserialize, Serialize};
 pub type PatchRef = String;
 type EventRef = String;
 pub type Tag = String;
+type Set<T> = std::collections::HashSet<T>;
 
 #[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct Patch {
     #[serde(default)]
-    add_start: Vec<AddStart>,
+    add_start: Set<AddStart>,
 
     #[serde(default)]
-    remove_start: Vec<RemoveStart>,
+    remove_start: Set<RemoveStart>,
 
     #[serde(default)]
-    add_tag: Vec<AddTag>,
+    add_tag: Set<AddTag>,
 
     #[serde(default)]
-    remove_tag: Vec<RemoveTag>,
+    remove_tag: Set<RemoveTag>,
 
     #[serde(default)]
-    create_event: Vec<CreateEvent>,
+    create_event: Set<CreateEvent>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct AddStart {
     parent: PatchRef,
@@ -32,7 +33,7 @@ pub struct AddStart {
     time: DateTime<Utc>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct RemoveStart {
     patch: PatchRef,
@@ -40,7 +41,7 @@ pub struct RemoveStart {
     time: DateTime<Utc>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct AddTag {
     parent: PatchRef,
@@ -48,7 +49,7 @@ pub struct AddTag {
     tag: Tag,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct RemoveTag {
     patch: PatchRef,
@@ -56,7 +57,7 @@ pub struct RemoveTag {
     tag: Tag,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub struct CreateEvent {
     event: EventRef,
@@ -67,36 +68,46 @@ pub struct CreateEvent {
 impl Patch {
     pub fn new() -> Self {
         Self {
-            add_start: Vec::new(),
-            remove_start: Vec::new(),
-            add_tag: Vec::new(),
-            remove_tag: Vec::new(),
-            create_event: Vec::new(),
+            add_start: Set::new(),
+            remove_start: Set::new(),
+            add_tag: Set::new(),
+            remove_tag: Set::new(),
+            create_event: Set::new(),
         }
     }
 
-    pub fn add_start(&mut self, parent: PatchRef, event: EventRef, time: DateTime<Utc>) {
-        self.add_start.push(AddStart {
+    pub fn add_start(mut self, parent: PatchRef, event: EventRef, time: DateTime<Utc>) -> Self {
+        self.add_start.insert(AddStart {
             parent,
             event,
             time,
-        })
+        });
+        self
     }
 
-    pub fn remove_start(&mut self, patch: PatchRef, event: EventRef, time: DateTime<Utc>) {
-        self.remove_start.push(RemoveStart { patch, event, time })
+    pub fn remove_start(mut self, patch: PatchRef, event: EventRef, time: DateTime<Utc>) -> Self {
+        self.remove_start.insert(RemoveStart { patch, event, time });
+        self
     }
 
-    pub fn add_tag(&mut self, parent: PatchRef, event: EventRef, tag: String) {
-        self.add_tag.push(AddTag { parent, event, tag })
+    pub fn add_tag(mut self, parent: PatchRef, event: EventRef, tag: String) -> Self {
+        self.add_tag.insert(AddTag { parent, event, tag });
+        self
     }
 
-    pub fn remove_tag(&mut self, patch: PatchRef, event: EventRef, tag: String) {
-        self.remove_tag.push(RemoveTag { patch, event, tag })
+    pub fn remove_tag(mut self, patch: PatchRef, event: EventRef, tag: String) -> Self {
+        self.remove_tag.insert(RemoveTag { patch, event, tag });
+        self
     }
 
-    pub fn create_event(&mut self, event: EventRef, start: DateTime<Utc>, tags: Vec<String>) {
-        self.create_event.push(CreateEvent { event, start, tags })
+    pub fn create_event(
+        mut self,
+        event: EventRef,
+        start: DateTime<Utc>,
+        tags: Vec<String>,
+    ) -> Self {
+        self.create_event.insert(CreateEvent { event, start, tags });
+        self
     }
 }
 
@@ -115,8 +126,7 @@ mod test {
 
     #[test]
     fn read_patch_with_create_event_toml() {
-        let mut expected = Patch::new();
-        expected.create_event(
+        let mut expected = Patch::new().create_event(
             s!("a"),
             Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
             vec![s!("work"), s!("coding")],
@@ -133,16 +143,16 @@ mod test {
 
     #[test]
     fn read_patch_with_all_fields_toml() {
-        let mut expected = Patch::new();
-        expected.add_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0));
-        expected.remove_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0));
-        expected.add_tag(s!("0"), s!("a"), s!("work"));
-        expected.remove_tag(s!("0"), s!("a"), s!("coding"));
-        expected.create_event(
-            s!("a"),
-            Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
-            vec![s!("work"), s!("coding")],
-        );
+        let expected = Patch::new()
+            .add_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0))
+            .remove_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0))
+            .add_tag(s!("0"), s!("a"), s!("work"))
+            .remove_tag(s!("0"), s!("a"), s!("coding"))
+            .create_event(
+                s!("a"),
+                Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
+                vec![s!("work"), s!("coding")],
+            );
 
         let toml_str = r#"
             [[add-start]]
