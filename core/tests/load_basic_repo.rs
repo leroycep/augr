@@ -7,7 +7,6 @@ use toml;
 struct SimpleStore {
     meta_folder: PathBuf,
     patch_folder: PathBuf,
-    _device_id: String,
 }
 
 #[derive(Debug, Snafu)]
@@ -38,11 +37,10 @@ pub enum SimpleStoreError {
 }
 
 impl SimpleStore {
-    pub fn new(root_folder: PathBuf, device_id: String) -> Self {
+    pub fn new(root_folder: PathBuf) -> Self {
         Self {
             meta_folder: root_folder.join("meta"),
             patch_folder: root_folder.join("patches"),
-            _device_id: device_id,
         }
     }
 }
@@ -105,6 +103,10 @@ macro_rules! meta {
     };
 }
 
+fn simple_store() -> SimpleStore {
+    SimpleStore::new("tests/basic_repo".into())
+}
+
 #[test]
 fn load_patches_into_store() {
     let expected_metas = vec![("laptop", meta!["laptop-1", "laptop-2"])];
@@ -125,7 +127,7 @@ fn load_patches_into_store() {
         ),
     ];
 
-    let store = SimpleStore::new("tests/basic_repo".into(), s!("laptop"));
+    let store = simple_store();
 
     for (device_id, meta) in expected_metas {
         assert_eq!(store.get_device_meta(device_id).unwrap(), meta);
@@ -133,4 +135,9 @@ fn load_patches_into_store() {
     for (patch_ref, patch) in expected_patches {
         assert_eq!(store.get_patch(patch_ref).unwrap(), patch);
     }
+}
+
+#[test]
+fn check_repository_state() {
+    assert!(false);
 }
