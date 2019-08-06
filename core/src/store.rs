@@ -1,4 +1,8 @@
-use crate::{Meta, Patch};
+pub mod meta;
+pub mod patch;
+
+use self::meta::Meta;
+use self::patch::Patch;
 use std::error::Error;
 
 pub trait Store {
