@@ -1,5 +1,7 @@
 use augr_core::{
-    repository::{event::Error as EventError, Error as RepositoryError, TimesheetError},
+    repository::{
+        event::Error as EventError, timesheet::Error as TimesheetError, Error as RepositoryError,
+    },
     Event, Meta, Patch, Repository, Store, Timesheet,
 };
 use chrono::{DateTime, Utc};

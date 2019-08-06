@@ -1,10 +1,12 @@
 pub mod event;
+pub mod timesheet;
 
 use crate::{EventRef, PatchRef, Store, Timesheet};
 use chrono::{DateTime, Utc};
 use event::{Error as EventError, PatchedEvent};
 use snafu::Snafu;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use timesheet::{Error as TimesheetError, PatchedTimesheet};
 
 #[derive(Eq, PartialEq, Debug, Snafu)]
 pub enum Error<IE>
@@ -126,105 +128,5 @@ impl<S: Store> Repository<S> {
         } else {
             Ok(timesheet)
         }
-    }
-}
-
-/// This representation of a timesheet is an intermediate form that allows
-/// an event to have multiple starts
-#[derive(Clone, Debug)]
-pub struct PatchedTimesheet {
-    events: BTreeMap<EventRef, PatchedEvent>,
-}
-
-#[derive(Eq, PartialEq, Debug, Snafu)]
-pub enum TimesheetError {
-    #[snafu(display("Could not flatten event {}: {}", event, source))]
-    FlattenEventError { source: EventError, event: EventRef },
-
-    #[snafu(display(
-        "Two events have the same start time (events \"{}\" and \"{}\")",
-        event_a,
-        event_b
-    ))]
-    DuplicateEventTime {
-        event_a: EventRef,
-        event_b: EventRef,
-    },
-}
-
-impl PatchedTimesheet {
-    fn new() -> Self {
-        Self {
-            events: BTreeMap::new(),
-        }
-    }
-
-    pub fn flatten(&self) -> Result<Timesheet, Vec<TimesheetError>> {
-        let mut timesheet = Timesheet::new();
-        let mut errors = Vec::new();
-        let mut event_datetimes_to_refs: BTreeMap<DateTime<Utc>, EventRef> = BTreeMap::new();
-        for (event_ref, patched_event) in self.events.iter() {
-            match patched_event.flatten() {
-                Ok(event) => {
-                    if let Some(_event_a_tags) = timesheet.insert_event(event.clone()) {
-                        errors.push(TimesheetError::DuplicateEventTime {
-                            event_a: event_datetimes_to_refs[event.start()].clone(),
-                            event_b: event_ref.clone(),
-                        });
-                    }
-                    event_datetimes_to_refs.insert(event.start().clone(), event_ref.clone());
-                }
-                Err(source) => {
-                    errors.push(TimesheetError::FlattenEventError {
-                        source,
-                        event: event_ref.clone(),
-                    });
-                }
-            }
-        }
-
-        if errors.len() > 0 {
-            Err(errors)
-        } else {
-            Ok(timesheet)
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use chrono::TimeZone;
-
-    #[test]
-    fn remove_start_from_event() {
-        let dt0 = Utc.ymd(2019, 07, 23).and_hms(12, 0, 0);
-        let dt1 = Utc.ymd(2019, 07, 23).and_hms(12, 30, 0);
-
-        let mut event = PatchedEvent::new();
-        event.add_start("a".into(), dt0);
-        event.add_start("a".into(), dt1);
-        event.remove_start("a".into(), dt0);
-
-        assert_eq!(
-            event.starts(),
-            [("a".into(), dt1)].into_iter().cloned().collect()
-        );
-    }
-
-    #[test]
-    fn remove_tag_from_event() {
-        let mut event = PatchedEvent::new();
-        event.add_tag("a".into(), "hello".into());
-        event.add_tag("a".into(), "world".into());
-        event.remove_tag("a".into(), "world".into());
-
-        assert_eq!(
-            event.tags(),
-            [("a".into(), "hello".into())]
-                .into_iter()
-                .cloned()
-                .collect()
-        );
     }
 }
