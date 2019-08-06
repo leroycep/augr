@@ -1,4 +1,4 @@
-use augr_core::{Meta, Patch, Store};
+use augr_core::{Event, Meta, Patch, Repository, Store, Timesheet};
 use chrono::{DateTime, Utc};
 use snafu::{ResultExt, Snafu};
 use std::{fs::read_to_string, path::PathBuf};
@@ -79,9 +79,9 @@ macro_rules! dt {
     }};
 }
 
-macro_rules! svec {
+macro_rules! sl {
     ( $( $s:expr ),* ) => {
-        vec![ $( $s.to_string(), )* ]
+        [ $( $s, )* ].into_iter().map(|sv| sv.to_string() ).collect()
     };
 }
 
@@ -109,13 +109,13 @@ fn simple_store() -> SimpleStore {
 
 #[test]
 fn load_patches_into_store() {
-    let expected_metas = vec![("laptop", meta!["laptop-1", "laptop-2"])];
+    let expected_metas = vec![("laptop", meta!["laptop-patch-2"])];
     let expected_patches = vec![
         (
             "laptop-patch-1",
             Patch::new()
-                .create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), svec!["lunch", "food"])
-                .create_event(s!("b"), dt!("2019-07-23T13:00:00Z"), svec!["work"]),
+                .create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"])
+                .create_event(s!("b"), dt!("2019-07-23T13:00:00Z"), sl!["work"]),
         ),
         (
             "laptop-patch-2",
@@ -139,5 +139,18 @@ fn load_patches_into_store() {
 
 #[test]
 fn check_repository_state() {
-    assert!(false);
+    let repository = Repository::from_store(simple_store(), s!("laptop"));
+
+    let current_timesheet = repository.get_current_timesheet();
+    assert!(current_timesheet.is_ok());
+    let current_timesheet = current_timesheet.unwrap();
+
+    let mut expected_timesheet = Timesheet::new();
+    expected_timesheet.insert_event(Event::new(dt!("2019-07-23T12:30:00Z"), sl!["lunch"]));
+    expected_timesheet.insert_event(Event::new(
+        dt!("2019-07-23T13:00:00Z"),
+        sl!["work", "awesome-project"],
+    ));
+
+    assert_eq!(current_timesheet.flatten(), Ok(expected_timesheet));
 }

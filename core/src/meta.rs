@@ -21,6 +21,10 @@ impl Meta {
     pub fn add_patch(&mut self, patch_ref: PatchRef) {
         self.patches.insert(patch_ref);
     }
+
+    pub fn patches(&self) -> impl Iterator<Item = &PatchRef> {
+        self.patches.iter()
+    }
 }
 
 #[cfg(test)]
@@ -30,7 +34,10 @@ mod test {
     #[test]
     fn read_from_toml() {
         let expected = Meta {
-            patches: ["laptop-1", "laptop-2"].into_iter().map(|s| s.to_string()).collect(),
+            patches: ["laptop-1", "laptop-2"]
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
         };
         let toml_str = r#"
             patches = ["laptop-1", "laptop-2"]

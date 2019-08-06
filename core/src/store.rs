@@ -1,4 +1,4 @@
-use crate::{Meta, Patch, PatchRef};
+use crate::{Meta, Patch};
 use std::error::Error;
 
 pub trait Store {
@@ -7,4 +7,3 @@ pub trait Store {
     fn get_device_meta(&self, device_id: &str) -> Result<Meta, Self::Error>;
     fn get_patch(&self, patch_ref: &str) -> Result<Patch, Self::Error>;
 }
-
