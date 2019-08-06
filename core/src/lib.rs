@@ -1,6 +1,6 @@
 mod meta;
 mod patch;
-mod repository;
+pub mod repository;
 mod store;
 mod timesheet;
 

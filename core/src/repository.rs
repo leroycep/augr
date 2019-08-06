@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use snafu::{ensure, Snafu};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-#[derive(Debug, Snafu)]
+#[derive(Eq, PartialEq, Debug, Snafu)]
 pub enum Error<IE>
 where
     IE: std::error::Error + 'static,
@@ -33,6 +33,11 @@ impl<S: Store> Repository<S> {
         let mut patches_to_load: VecDeque<_> = meta.patches().cloned().collect();
         let mut patches_loaded = BTreeSet::new();
         while let Some(patch_ref) = patches_to_load.pop_front() {
+            // Don't apply patches twice
+            if patches_loaded.contains(&patch_ref) {
+                continue;
+            }
+
             let patch = match self.store.get_patch(&patch_ref) {
                 Ok(p) => p,
                 Err(source) => {
@@ -75,10 +80,16 @@ impl<S: Store> Repository<S> {
                 event.add_start(patch_ref.clone(), start_added.time.clone())
             }
             for start_removed in patch.remove_start.iter() {
-                let event = timesheet
-                    .events
-                    .get_mut(&start_removed.event)
-                    .expect("no event for remove-start");
+                let event = match timesheet.events.get_mut(&start_removed.event) {
+                    Some(event) => event,
+                    None => {
+                        errors.push(Error::EventNotFound {
+                            patch: patch_ref.clone(),
+                            event: start_removed.event.clone(),
+                        });
+                        continue;
+                    }
+                };
                 event.remove_start(start_removed.patch.clone(), start_removed.time.clone())
             }
 
@@ -117,10 +128,12 @@ impl<S: Store> Repository<S> {
 
 /// This representation of a timesheet is an intermediate form that allows
 /// an event to have multiple starts
+#[derive(Clone, Debug)]
 pub struct PatchedTimesheet {
     events: BTreeMap<EventRef, PatchedEvent>,
 }
 
+#[derive(Clone, Debug)]
 pub struct PatchedEvent {
     starts_added: BTreeSet<(PatchRef, DateTime<Utc>)>,
     starts_removed: BTreeSet<(PatchRef, DateTime<Utc>)>,
