@@ -2,10 +2,10 @@ use augr_core::{
     repository::{
         event::Error as EventError, timesheet::Error as TimesheetError, Error as RepositoryError,
     },
-    Event, Meta, Patch, Repository, Store, Timesheet,
+    Meta, Patch, Repository, Store,
 };
 use chrono::{DateTime, Utc};
-use snafu::{ResultExt, Snafu};
+use snafu::Snafu;
 use std::collections::BTreeMap;
 
 struct MemStore {

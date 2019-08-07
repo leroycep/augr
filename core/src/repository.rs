@@ -2,11 +2,10 @@ pub mod event;
 pub mod timesheet;
 
 use crate::{EventRef, PatchRef, Store, Timesheet};
-use chrono::{DateTime, Utc};
-use event::{Error as EventError, PatchedEvent};
+use event::PatchedEvent;
 use snafu::Snafu;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use timesheet::{Error as TimesheetError, PatchedTimesheet};
+use std::collections::{BTreeSet, VecDeque};
+use timesheet::PatchedTimesheet;
 
 #[derive(Eq, PartialEq, Debug, Snafu)]
 pub enum Error<IE>
