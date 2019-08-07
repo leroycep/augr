@@ -1,5 +1,8 @@
 pub mod meta;
 pub mod patch;
+pub mod sync_folder_store;
+
+pub use sync_folder_store::{SyncFolderStore, SyncFolderStoreError};
 
 use self::meta::Meta;
 use self::patch::Patch;
