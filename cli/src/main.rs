@@ -1,6 +1,6 @@
+mod chart;
 mod config;
 mod database;
-mod chart;
 mod start;
 mod summary;
 mod sync_folder_db;
@@ -9,11 +9,16 @@ mod time_input;
 mod timesheet;
 
 use snafu::{ErrorCompat, ResultExt, Snafu};
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "augr")]
 struct Opt {
+    /// Use the config file at the specified path. Defaults to `$XDG_CONFIG_HOME/augr/config.toml`.
+    #[structopt(long = "config")]
+    config: Option<PathBuf>,
+
     #[structopt(subcommand)]
     cmd: Option<Command>,
 }
@@ -60,8 +65,13 @@ fn main() {
 fn run() -> Result<(), Error> {
     let opt = Opt::from_args();
 
-    let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "augr").unwrap();
-    let conf_file = proj_dirs.config_dir().join("config.toml");
+    let conf_file = match opt.config {
+        Some(config_path) => config_path,
+        None => {
+            let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "augr").unwrap();
+            proj_dirs.config_dir().join("config.toml")
+        }
+    };
 
     let conf = config::load_config(&conf_file).context(GetConfig {})?;
 
