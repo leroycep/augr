@@ -1,9 +1,9 @@
 pub mod event;
 pub mod timesheet;
 
-use crate::{EventRef, PatchRef, Store, Timesheet};
+use crate::{EventRef, PatchRef, Store};
 use event::PatchedEvent;
-use snafu::Snafu;
+use snafu::{ResultExt, Snafu};
 use std::collections::{BTreeSet, VecDeque};
 use timesheet::PatchedTimesheet;
 
@@ -12,6 +12,9 @@ pub enum Error<IE>
 where
     IE: std::error::Error + 'static,
 {
+    #[snafu(display("Unable to load metadata: {}", source))]
+    LoadMeta { source: IE },
+
     #[snafu(display("Unable to load patch {}: {}", patch, source))]
     PatchNotFound { source: IE, patch: PatchRef },
 
@@ -21,20 +24,23 @@ where
 
 pub struct Repository<S: Store> {
     store: S,
-    device_id: String,
 }
 
 impl<S: Store> Repository<S> {
-    pub fn from_store(store: S, device_id: String) -> Self {
-        Self { store, device_id }
+    pub fn from_store(store: S) -> Self {
+        Self { store }
     }
 
     pub fn get_current_timesheet(&self) -> Result<PatchedTimesheet, Vec<Error<S::Error>>> {
         let mut timesheet = PatchedTimesheet::new();
         let mut errors = Vec::new();
 
-        let meta = self.store.get_device_meta(&self.device_id).unwrap();
-        let mut patches_to_load: VecDeque<_> = meta.patches().cloned().collect();
+        let meta = self
+            .store
+            .get_meta()
+            .context(LoadMeta {})
+            .map_err(|e| vec![e])?;
+        let mut patches_to_load: VecDeque<PatchRef> = meta.patches().cloned().collect();
         let mut patches_loaded = BTreeSet::new();
         while let Some(patch_ref) = patches_to_load.pop_front() {
             // Don't apply patches twice

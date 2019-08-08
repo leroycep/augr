@@ -32,7 +32,7 @@ macro_rules! meta {
 }
 
 fn simple_store() -> SyncFolderStore {
-    SyncFolderStore::new("tests/basic_repo".into())
+    SyncFolderStore::new("tests/basic_repo".into(), "laptop".into())
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn load_patches_into_store() {
     let store = simple_store();
 
     for (device_id, meta) in expected_metas {
-        assert_eq!(store.get_device_meta(device_id).unwrap(), meta);
+        assert_eq!(store.get_meta().unwrap(), meta);
     }
     for (patch_ref, patch) in expected_patches {
         assert_eq!(store.get_patch(patch_ref).unwrap(), patch);
@@ -67,7 +67,7 @@ fn load_patches_into_store() {
 
 #[test]
 fn check_repository_state() {
-    let repository = Repository::from_store(simple_store(), s!("laptop"));
+    let repository = Repository::from_store(simple_store());
 
     let current_timesheet = repository.get_current_timesheet();
     assert!(current_timesheet.is_ok());

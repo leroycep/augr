@@ -1,11 +1,12 @@
-use crate::{Event, Meta, Patch, Repository, Store};
+use crate::{Meta, Patch, PatchRef, Store};
 use snafu::{ResultExt, Snafu};
 use std::{fs::read_to_string, path::PathBuf};
 use toml;
 
 pub struct SyncFolderStore {
-    meta_folder: PathBuf,
+    root_folder: PathBuf,
     patch_folder: PathBuf,
+    device_id: String,
 }
 
 #[derive(Debug, Snafu)]
@@ -13,6 +14,12 @@ pub enum SyncFolderStoreError {
     #[snafu(display("Unable to deserialize meta {}: {}", device_id, source))]
     DeserializeMeta {
         source: toml::de::Error,
+        device_id: String,
+    },
+
+    #[snafu(display("Unable to serialize meta {}: {}", device_id, source))]
+    SerializeMeta {
+        source: toml::ser::Error,
         device_id: String,
     },
 
@@ -36,27 +43,47 @@ pub enum SyncFolderStoreError {
 }
 
 impl SyncFolderStore {
-    pub fn new(root_folder: PathBuf) -> Self {
+    pub fn new(root_folder: PathBuf, device_id: String) -> Self {
         Self {
-            meta_folder: root_folder.join("meta"),
+            device_id,
             patch_folder: root_folder.join("patches"),
+            root_folder: root_folder,
         }
+    }
+
+    fn meta_file_path(&self) -> PathBuf {
+        self.root_folder
+            .join("meta")
+            .join(self.device_id.clone())
+            .with_extension("toml")
     }
 }
 
 impl Store for SyncFolderStore {
     type Error = SyncFolderStoreError;
 
-    fn get_device_meta(&self, device_id: &str) -> Result<Meta, Self::Error> {
-        let path = self.meta_folder.join(device_id).with_extension("toml");
+    fn get_meta(&self) -> Result<Meta, Self::Error> {
+        let path = self.meta_file_path();
 
         let contents = read_to_string(&path).context(ReadFile { path })?;
 
         let meta = toml::de::from_str(&contents).context(DeserializeMeta {
-            device_id: device_id.to_string(),
+            device_id: self.device_id.clone(),
         })?;
 
         Ok(meta)
+    }
+
+    fn save_meta(&mut self, meta: &Meta) -> Result<(), Self::Error> {
+        let path = self.meta_file_path();
+
+        let contents = toml::ser::to_string(&meta).context(SerializeMeta {
+            device_id: self.device_id.clone(),
+        })?;
+
+        std::fs::write(&path, contents).context(WriteFile { path })?;
+
+        Ok(())
     }
 
     fn get_patch(&self, patch_ref: &str) -> Result<Patch, Self::Error> {
@@ -69,5 +96,18 @@ impl Store for SyncFolderStore {
         })?;
 
         Ok(patch)
+    }
+
+    fn add_patch(&mut self, patch: &Patch) -> Result<PatchRef, Self::Error> {
+        let patch_ref = "hello".to_string();
+        let path = self.patch_folder.join(&patch_ref).with_extension("toml");
+
+        let contents = toml::ser::to_string(patch).context(SerializeMeta {
+            device_id: self.device_id.clone(),
+        })?;
+
+        std::fs::write(&path, contents).context(WriteFile { path })?;
+
+        Ok(patch_ref)
     }
 }

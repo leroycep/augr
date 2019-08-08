@@ -1,6 +1,6 @@
 pub mod repository;
 pub mod store;
-mod timesheet;
+pub mod timesheet;
 
 pub use crate::repository::Repository;
 pub use crate::store::{

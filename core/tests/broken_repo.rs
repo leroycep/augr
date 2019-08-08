@@ -2,28 +2,23 @@ use augr_core::{
     repository::{
         event::Error as EventError, timesheet::Error as TimesheetError, Error as RepositoryError,
     },
-    Meta, Patch, Repository, Store,
+    Meta, Patch, PatchRef, Repository, Store,
 };
 use chrono::{DateTime, Utc};
 use snafu::Snafu;
 use std::collections::BTreeMap;
 
 struct MemStore {
-    metas: BTreeMap<String, Meta>,
+    meta: Meta,
     patches: BTreeMap<String, Patch>,
 }
 
 impl MemStore {
-    pub fn new() -> Self {
+    pub fn new(meta: Meta) -> Self {
         Self {
-            metas: BTreeMap::new(),
+            meta,
             patches: BTreeMap::new(),
         }
-    }
-
-    pub fn meta(mut self, device_id: &str, meta: Meta) -> Self {
-        self.metas.insert(device_id.to_string(), meta);
-        self
     }
 
     pub fn patch(mut self, patch_ref: &str, patch: Patch) -> Self {
@@ -44,13 +39,16 @@ pub enum MemStoreError {
 impl Store for MemStore {
     type Error = MemStoreError;
 
-    fn get_device_meta(&self, device_id: &str) -> Result<Meta, Self::Error> {
-        self.metas
-            .get(device_id)
-            .map(|x| x.clone())
-            .ok_or(MemStoreError::MetaNotFound {
-                device_id: device_id.to_string(),
-            })
+    fn get_meta(&self) -> Result<Meta, Self::Error> {
+        Ok(self.meta.clone())
+    }
+
+    fn save_meta(&mut self, _meta: &Meta) -> Result<(), Self::Error> {
+        unimplemented!()
+    }
+
+    fn add_patch(&mut self, _patch: &Patch) -> Result<PatchRef, Self::Error> {
+        unimplemented!()
     }
 
     fn get_patch(&self, patch_ref: &str) -> Result<Patch, Self::Error> {
@@ -95,8 +93,7 @@ macro_rules! meta {
 
 #[test]
 fn unknown_event_ref_reported() {
-    let store = MemStore::new()
-        .meta("laptop", meta!["2"])
+    let store = MemStore::new(meta!["2"])
         .patch(
             "1",
             Patch::new().create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"]),
@@ -106,7 +103,7 @@ fn unknown_event_ref_reported() {
             Patch::new().remove_start(s!("1"), s!("b"), dt!("2019-07-23T12:00:00Z")),
         );
 
-    let repo = Repository::from_store(store, s!("laptop"));
+    let repo = Repository::from_store(store);
     let errors = dbg!(repo
         .get_current_timesheet()
         .expect_err("patches to produce error"));
@@ -119,11 +116,9 @@ fn unknown_event_ref_reported() {
 
 #[test]
 fn unknown_patch_reported() {
-    let store = MemStore::new()
-        .meta("laptop", meta!["2"])
-        .patch("1", Patch::new());
+    let store = MemStore::new(meta!["2"]).patch("1", Patch::new());
 
-    let repo = Repository::from_store(store, s!("laptop"));
+    let repo = Repository::from_store(store);
     let errors = repo
         .get_current_timesheet()
         .expect_err("unkown patch to be reported");
@@ -136,8 +131,7 @@ fn unknown_patch_reported() {
 
 #[test]
 fn invalid_number_of_start_times() {
-    let store = MemStore::new()
-        .meta("laptop", meta!["2", "3"])
+    let store = MemStore::new(meta!["2", "3"])
         .patch(
             "1",
             Patch::new()
@@ -153,7 +147,7 @@ fn invalid_number_of_start_times() {
             Patch::new().remove_start(s!("1"), s!("b"), dt!("2019-07-23T13:00:00Z")),
         );
 
-    let repo = Repository::from_store(store, s!("laptop"));
+    let repo = Repository::from_store(store);
     let current_timesheet = dbg!(repo
         .get_current_timesheet()
         .expect("patches to build pathed timesheet"));
