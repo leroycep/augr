@@ -1,8 +1,7 @@
 pub mod event;
 pub mod timesheet;
 
-use crate::{EventRef, Meta, Patch, PatchRef, Store};
-use event::PatchedEvent;
+use crate::{Meta, Patch, PatchRef, Store};
 use snafu::{ResultExt, Snafu};
 use std::collections::{BTreeSet, VecDeque};
 use timesheet::{Error as TimesheetError, PatchedTimesheet};

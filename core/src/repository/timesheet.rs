@@ -96,7 +96,7 @@ impl PatchedTimesheet {
                 event.add_tag(patch_ref.clone(), tag);
             }
             match new_state.events.insert(new_event.event.clone(), event) {
-                Some(previous_event) => {
+                Some(_previous_event) => {
                     errors.push(Error::DuplicateEventId {
                         id: new_event.event.clone(),
                     });
