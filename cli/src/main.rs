@@ -58,6 +58,11 @@ pub enum Error {
 
     #[snafu(display("Error importing data: {}", source))]
     ImportError { source: Box<dyn std::error::Error> },
+
+    #[snafu(display("Errors synchronizing data: {:?}", errors))]
+    SyncError {
+        errors: Vec<RepositoryError<SyncFolderStoreError>>,
+    },
 }
 
 fn main() {
@@ -75,6 +80,7 @@ fn main() {
 fn run() -> Result<(), Error> {
     let opt = Opt::from_args();
 
+    // Load config
     let conf_file = match opt.config {
         Some(config_path) => config_path,
         None => {
@@ -82,31 +88,37 @@ fn run() -> Result<(), Error> {
             proj_dirs.config_dir().join("config.toml")
         }
     };
-
     let conf = config::load_config(&conf_file).context(GetConfig {})?;
 
+    // Load store for own data
     let store = SyncFolderStore::new(conf.sync_folder.into(), conf.device_id).should_init(true);
     let mut repo = Repository::from_store(store).unwrap();
+
+    // Synchronize data
+    repo.try_sync_data()
+        .map_err(|errors| Error::SyncError { errors })?;
+    repo.save_meta().unwrap();
+
+    // Convert abstract patch data structure into a more conventional format
     let eventgraph = repo.timesheet();
     let timesheet = eventgraph
         .flatten()
         .map_err(|conflicts| Error::MergeConflicts { conflicts })?;
 
+    // Run command
     match opt.cmd.unwrap_or(Command::default()) {
         Command::Start(subcmd) => {
             let patches = subcmd.exec(&timesheet);
             for patch in patches {
-                let patch_ref = String::new();
-                let res = repo.add_patch(patch).unwrap();
-                println!("{}: {:?}", patch_ref, res);
+                println!("{}", patch.patch_ref());
+                repo.add_patch(patch).unwrap();
             }
         }
         Command::Import(subcmd) => {
             let patches = subcmd.exec(&timesheet).context(ImportError {})?;
             for patch in patches {
-                let patch_ref = String::new();
-                let res = repo.add_patch(patch).unwrap();
-                println!("{}: {:?}", patch_ref, res);
+                println!("{}", patch.patch_ref());
+                repo.add_patch(patch).unwrap();
             }
         }
         Command::Summary(subcmd) => subcmd.exec(&timesheet),
@@ -114,6 +126,7 @@ fn run() -> Result<(), Error> {
         Command::Tags(subcmd) => subcmd.exec(&timesheet),
     };
 
+    // Save which patches this device uses to disk
     repo.save_meta().unwrap();
 
     Ok(())

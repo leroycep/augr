@@ -37,6 +37,9 @@ where
         conflicts: Vec<TimesheetError>,
         patch: PatchRef,
     },
+
+    #[snafu(display("IOError: {}", source))]
+    IOError { source: IE },
 }
 
 #[derive(Debug)]
@@ -114,17 +117,15 @@ where
         &self.timesheet
     }
 
-    fn load_all_patches(&mut self) -> Result<(), Vec<Error<S::Error>>> {
+    fn load_patches(
+        &mut self,
+        patches: impl Iterator<Item = PatchRef>,
+    ) -> Result<(), Vec<Error<S::Error>>> {
         let mut errors = Vec::new();
 
         let mut error_on_loading: BTreeSet<PatchRef> = BTreeSet::new();
 
-        let meta = self
-            .store
-            .get_meta()
-            .context(LoadMeta {})
-            .map_err(|e| vec![e])?;
-        let mut patches_to_load: VecDeque<PatchRef> = meta.patches().cloned().collect();
+        let mut patches_to_load: VecDeque<PatchRef> = patches.collect();
         while let Some(patch_ref) = patches_to_load.pop_front() {
             let patch = match self.store.get_patch(&patch_ref) {
                 Ok(p) => p,
@@ -160,5 +161,39 @@ where
         } else {
             Ok(())
         }
+    }
+
+    fn load_all_patches(&mut self) -> Result<(), Vec<Error<S::Error>>> {
+        let meta = self
+            .store
+            .get_meta()
+            .context(LoadMeta {})
+            .map_err(|e| vec![e])?;
+
+        self.load_patches(meta.patches().cloned())
+    }
+}
+
+use crate::store::sync_folder_store::{SyncFolderStore, SyncFolderStoreError};
+
+impl Repository<SyncFolderStore> {
+    pub fn try_sync_data(&mut self) -> Result<(), Vec<Error<SyncFolderStoreError>>> {
+        let metas = self
+            .store
+            .get_other_metas()
+            .context(IOError {})
+            .map_err(|e| vec![e])?;
+
+        let patches_to_load: Vec<PatchRef> = metas
+            .filter_map(|x| x.ok())
+            .flat_map(|meta| {
+                meta.patches()
+                    .map(|x| x.clone())
+                    .collect::<Vec<_>>()
+                    .into_iter()
+            })
+            .collect();
+
+        self.load_patches(patches_to_load.into_iter())
     }
 }

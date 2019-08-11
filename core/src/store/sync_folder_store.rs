@@ -47,6 +47,9 @@ pub enum SyncFolderStoreError {
         source: std::io::Error,
         path: PathBuf,
     },
+
+    #[snafu(display("IO error: {}", source))]
+    IOError { source: std::io::Error },
 }
 
 impl SyncFolderStore {
@@ -69,6 +72,30 @@ impl SyncFolderStore {
             .join("meta")
             .join(self.device_id.clone())
             .with_extension("toml")
+    }
+
+    pub fn get_other_metas(
+        &self,
+    ) -> Result<impl Iterator<Item = Result<Meta, SyncFolderStoreError>>, SyncFolderStoreError>
+    {
+        let meta_folder = self.root_folder.join("meta");
+        let meta_file = self.meta_file_path();
+
+        let sync_folder_items = meta_folder.read_dir().context(IOError {})?;
+        let iter = sync_folder_items
+            .filter_map(|d| d.ok())
+            .filter(move |dir_entry| dir_entry.path() != meta_file)
+            .map(|dir_entry| {
+                let path = dir_entry.path();
+                let contents = read_to_string(&path).context(ReadFile { path: path.clone() })?;
+
+                let meta = toml::de::from_str(&contents).context(DeserializeMeta {
+                    device_id: path.display().to_string(),
+                })?;
+
+                Ok(meta)
+            });
+        Ok(iter)
     }
 }
 
