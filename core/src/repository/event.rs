@@ -83,33 +83,37 @@ impl PatchedEvent {
 mod test {
     use super::*;
     use chrono::TimeZone;
+    use uuid::Uuid;
 
     #[test]
     fn remove_start_from_event() {
         let dt0 = Utc.ymd(2019, 07, 23).and_hms(12, 0, 0);
         let dt1 = Utc.ymd(2019, 07, 23).and_hms(12, 30, 0);
+        let patch_ref_a = Uuid::parse_str("81790c38-96dd-4577-8b85-9f7c8bd6802b").unwrap();
 
         let mut event = PatchedEvent::new();
-        event.add_start("a".into(), dt0);
-        event.add_start("a".into(), dt1);
-        event.remove_start("a".into(), dt0);
+        event.add_start(patch_ref_a.clone(), dt0);
+        event.add_start(patch_ref_a.clone(), dt1);
+        event.remove_start(patch_ref_a.clone(), dt0);
 
         assert_eq!(
             event.starts(),
-            [("a".into(), dt1)].into_iter().cloned().collect()
+            [(patch_ref_a.clone(), dt1)].into_iter().cloned().collect()
         );
     }
 
     #[test]
     fn remove_tag_from_event() {
+        let patch_ref_a = Uuid::parse_str("81790c38-96dd-4577-8b85-9f7c8bd6802b").unwrap();
+
         let mut event = PatchedEvent::new();
-        event.add_tag("a".into(), "hello".into());
-        event.add_tag("a".into(), "world".into());
-        event.remove_tag("a".into(), "world".into());
+        event.add_tag(patch_ref_a.clone(), "hello".into());
+        event.add_tag(patch_ref_a.clone(), "world".into());
+        event.remove_tag(patch_ref_a.clone(), "world".into());
 
         assert_eq!(
             event.tags(),
-            [("a".into(), "hello".into())]
+            [(patch_ref_a.clone(), "hello".into())]
                 .into_iter()
                 .cloned()
                 .collect()

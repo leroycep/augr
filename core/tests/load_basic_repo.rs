@@ -1,5 +1,6 @@
 use augr_core::{store::SyncFolderStore, Event, Meta, Patch, Repository, Store, Timesheet};
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 macro_rules! dt {
     ( $dt:expr ) => {{
@@ -24,7 +25,7 @@ macro_rules! meta {
         {
             let mut temp_meta = Meta::new();
             $(
-                temp_meta.add_patch($x.to_string());
+                temp_meta.add_patch($x.clone());
             )*
             temp_meta
         }
@@ -37,37 +38,32 @@ fn simple_store() -> SyncFolderStore {
 
 #[test]
 fn load_patches_into_store() {
-    let expected_metas = vec![("laptop", meta!["laptop-patch-2"])];
+    let patch1 = &Uuid::parse_str("d83f2984-8f59-4a32-9492-f910717b683c").unwrap();
+    let patch2 = &Uuid::parse_str("386d2d62-7c3f-4518-9709-d2145261b853").unwrap();
+
+    let expected_meta = meta![patch2.clone()];
     let expected_patches = vec![
-        (
-            "laptop-patch-1",
-            Patch::new()
-                .create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"])
-                .create_event(s!("b"), dt!("2019-07-23T13:00:00Z"), sl!["work"]),
-        ),
-        (
-            "laptop-patch-2",
-            Patch::new()
-                .remove_start(s!("laptop-patch-1"), s!("a"), dt!("2019-07-23T12:00:00Z"))
-                .add_start(s!("laptop-patch-1"), s!("a"), dt!("2019-07-23T12:30:00Z"))
-                .remove_tag(s!("laptop-patch-1"), s!("a"), s!("food"))
-                .add_tag(s!("laptop-patch-1"), s!("b"), s!("awesome-project")),
-        ),
+        Patch::with_id(patch1.clone())
+            .create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"])
+            .create_event(s!("b"), dt!("2019-07-23T13:00:00Z"), sl!["work"]),
+        Patch::with_id(patch2.clone())
+            .remove_start(patch1.clone(), s!("a"), dt!("2019-07-23T12:00:00Z"))
+            .add_start(patch1.clone(), s!("a"), dt!("2019-07-23T12:30:00Z"))
+            .remove_tag(patch1.clone(), s!("a"), s!("food"))
+            .add_tag(patch1.clone(), s!("b"), s!("awesome-project")),
     ];
 
     let store = simple_store();
 
-    for (device_id, meta) in expected_metas {
-        assert_eq!(store.get_meta().unwrap(), meta);
-    }
-    for (patch_ref, patch) in expected_patches {
-        assert_eq!(store.get_patch(patch_ref).unwrap(), patch);
+    assert_eq!(store.get_meta().unwrap(), expected_meta);
+    for patch in expected_patches {
+        assert_eq!(store.get_patch(patch.patch_ref()).unwrap(), patch);
     }
 }
 
 #[test]
 fn check_repository_state() {
-    let repository = Repository::from_store(simple_store());
+    let repository = dbg!(Repository::from_store(simple_store()));
     assert!(repository.is_ok());
     let repository = repository.unwrap();
 

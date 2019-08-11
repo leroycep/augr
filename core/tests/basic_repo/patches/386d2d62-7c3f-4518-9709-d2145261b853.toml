@@ -1,0 +1,22 @@
+id = "386d2d62-7c3f-4518-9709-d2145261b853"
+
+[[remove-start]]
+patch = "d83f2984-8f59-4a32-9492-f910717b683c"
+event = "a"
+time = "2019-07-23T12:00:00+00:00"
+
+[[add-start]]
+parent = "d83f2984-8f59-4a32-9492-f910717b683c"
+event = "a"
+time = "2019-07-23T12:30:00+00:00"
+
+[[remove-tag]]
+patch = "d83f2984-8f59-4a32-9492-f910717b683c"
+event = "a"
+tag = "food"
+
+[[add-tag]]
+parent = "d83f2984-8f59-4a32-9492-f910717b683c"
+event = "b"
+tag = "awesome-project"
+

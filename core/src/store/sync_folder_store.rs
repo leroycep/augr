@@ -7,6 +7,7 @@ use std::{
 };
 use toml;
 
+#[derive(Debug)]
 pub struct SyncFolderStore {
     /// Whether the repository should create a new file if one is not found
     init: bool,

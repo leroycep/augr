@@ -80,6 +80,17 @@ impl Patch {
         }
     }
 
+    pub fn with_id(id: PatchRef) -> Self {
+        Self {
+            id,
+            add_start: Set::new(),
+            remove_start: Set::new(),
+            add_tag: Set::new(),
+            remove_tag: Set::new(),
+            create_event: Set::new(),
+        }
+    }
+
     pub fn patch_ref(&self) -> &PatchRef {
         &self.id
     }
@@ -145,13 +156,16 @@ mod test {
 
     #[test]
     fn read_patch_with_create_event_toml() {
-        let expected = Patch::new().create_event(
+        let id = Uuid::parse_str("e39076fe-6b5a-4a7f-b927-7fc1df5ba275").unwrap();
+        let expected = Patch::with_id(id).create_event(
             s!("a"),
             Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
             vec![s!("work"), s!("coding")],
         );
 
         let toml_str = r#"
+            id = "e39076fe-6b5a-4a7f-b927-7fc1df5ba275"
+
             [[create-event]]
             event = "a"
             start = "2019-07-24T14:00:00+00:00"
@@ -162,35 +176,48 @@ mod test {
 
     #[test]
     fn read_patch_with_all_fields_toml() {
-        let expected = Patch::new()
-            .add_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0))
-            .remove_start(s!("0"), s!("a"), Utc.ymd(2019, 7, 24).and_hms(14, 0, 0))
-            .add_tag(s!("0"), s!("a"), s!("work"))
-            .remove_tag(s!("0"), s!("a"), s!("coding"))
-            .create_event(
-                s!("a"),
-                Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
-                vec![s!("work"), s!("coding")],
-            );
+        let patch0 = Uuid::parse_str("fa5de1d9-aa11-49fa-b064-8128281a7d91").unwrap();
+
+        let expected =
+            Patch::with_id(Uuid::parse_str("2a226f4d-60f2-493d-9e9a-d6c71d98b515").unwrap())
+                .add_start(
+                    patch0.clone(),
+                    s!("a"),
+                    Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
+                )
+                .remove_start(
+                    patch0.clone(),
+                    s!("a"),
+                    Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
+                )
+                .add_tag(patch0.clone(), s!("a"), s!("work"))
+                .remove_tag(patch0.clone(), s!("a"), s!("coding"))
+                .create_event(
+                    s!("a"),
+                    Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
+                    vec![s!("work"), s!("coding")],
+                );
 
         let toml_str = r#"
+            id = "2a226f4d-60f2-493d-9e9a-d6c71d98b515"
+
             [[add-start]]
-            parent = "0"
+            parent = "fa5de1d9-aa11-49fa-b064-8128281a7d91"
             event = "a"
             time = "2019-07-24T14:00:00+00:00"
 
             [[remove-start]]
-            patch = "0"
+            patch = "fa5de1d9-aa11-49fa-b064-8128281a7d91"
             event = "a"
             time = "2019-07-24T14:00:00+00:00"
 
             [[add-tag]]
-            parent = "0"
+            parent = "fa5de1d9-aa11-49fa-b064-8128281a7d91"
             event = "a"
             tag = "work"
 
             [[remove-tag]]
-            patch = "0"
+            patch = "fa5de1d9-aa11-49fa-b064-8128281a7d91"
             event = "a"
             tag = "coding"
 

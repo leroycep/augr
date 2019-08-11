@@ -7,11 +7,12 @@ use augr_core::{
 use chrono::{DateTime, Utc};
 use snafu::Snafu;
 use std::collections::BTreeMap;
+use uuid::Uuid;
 
 #[derive(Debug)]
 struct MemStore {
     meta: Meta,
-    patches: BTreeMap<String, Patch>,
+    patches: BTreeMap<PatchRef, Patch>,
 }
 
 impl MemStore {
@@ -22,8 +23,8 @@ impl MemStore {
         }
     }
 
-    pub fn patch(mut self, patch_ref: &str, patch: Patch) -> Self {
-        self.patches.insert(patch_ref.to_string(), patch);
+    pub fn patch(mut self, patch: Patch) -> Self {
+        self.patches.insert(patch.patch_ref().clone(), patch);
         self
     }
 }
@@ -34,7 +35,7 @@ pub enum MemStoreError {
     MetaNotFound { device_id: String },
 
     #[snafu(display("Patch not found {}", patch_ref))]
-    PatchNotFound { patch_ref: String },
+    PatchNotFound { patch_ref: PatchRef },
 }
 
 impl Store for MemStore {
@@ -48,16 +49,16 @@ impl Store for MemStore {
         unimplemented!()
     }
 
-    fn add_patch(&mut self, _patch: &Patch) -> Result<PatchRef, Self::Error> {
+    fn add_patch(&mut self, _patch: &Patch) -> Result<(), Self::Error> {
         unimplemented!()
     }
 
-    fn get_patch(&self, patch_ref: &str) -> Result<Patch, Self::Error> {
+    fn get_patch(&self, patch_ref: &PatchRef) -> Result<Patch, Self::Error> {
         self.patches
             .get(patch_ref)
             .map(|x| x.clone())
             .ok_or(MemStoreError::PatchNotFound {
-                patch_ref: patch_ref.to_string(),
+                patch_ref: patch_ref.clone(),
             })
     }
 }
@@ -80,12 +81,18 @@ macro_rules! s {
     };
 }
 
+macro_rules! p {
+    ($s:expr) => {
+        Patch::with_id($s.clone())
+    };
+}
+
 macro_rules! meta {
     ( $( $x:expr ),* ) => {
         {
             let mut temp_meta = Meta::new();
             $(
-                temp_meta.add_patch($x.to_string());
+                temp_meta.add_patch($x.clone());
             )*
             temp_meta
         }
@@ -94,22 +101,19 @@ macro_rules! meta {
 
 #[test]
 fn unknown_event_ref_reported() {
-    let store = MemStore::new(meta!["2"])
-        .patch(
-            "1",
-            Patch::new().create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"]),
-        )
-        .patch(
-            "2",
-            Patch::new().remove_start(s!("1"), s!("b"), dt!("2019-07-23T12:00:00Z")),
-        );
+    let patch1 = &Uuid::parse_str("2a226f4d-60f2-493d-9e9a-d6c71d98b515").unwrap();
+    let patch2 = &Uuid::parse_str("dad9051e-2e83-446e-b9aa-299bd4a34b37").unwrap();
+
+    let store = MemStore::new(meta![patch2])
+        .patch(p!(patch1).create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"]))
+        .patch(p!(patch2).remove_start(patch1.clone(), s!("b"), dt!("2019-07-23T12:00:00Z")));
 
     let errors = Repository::from_store(store).expect_err("patches to produce error");
 
     assert!(errors.contains(&RepositoryError::PatchingTimesheet {
-        patch: s!("2"),
+        patch: patch2.clone(),
         conflicts: vec![TimesheetError::UnknownEvent {
-            patch: s!("2"),
+            patch: patch2.clone(),
             event: s!("b")
         }]
     }));
@@ -117,33 +121,35 @@ fn unknown_event_ref_reported() {
 
 #[test]
 fn unknown_patch_reported() {
-    let store = MemStore::new(meta!["2"]).patch("1", Patch::new());
+    let patch1 = &Uuid::new_v4();
+    let patch2 = &Uuid::new_v4();
+
+    let store = MemStore::new(meta![patch2.clone()]).patch(p!(patch1));
 
     let errors = Repository::from_store(store).unwrap_err();
 
     assert!(errors.contains(&RepositoryError::PatchNotFound {
-        source: MemStoreError::PatchNotFound { patch_ref: s!("2") },
-        patch: s!("2")
+        source: MemStoreError::PatchNotFound {
+            patch_ref: patch2.clone(),
+        },
+        patch: patch2.clone(),
     }));
 }
 
 #[test]
 fn invalid_number_of_start_times() {
-    let store = MemStore::new(meta!["2", "3"])
+    let patch1 = &Uuid::new_v4();
+    let patch2 = &Uuid::new_v4();
+    let patch3 = &Uuid::new_v4();
+
+    let store = MemStore::new(meta![patch2, patch3])
         .patch(
-            "1",
-            Patch::new()
+            p!(patch1)
                 .create_event(s!("a"), dt!("2019-07-23T12:00:00Z"), sl!["lunch", "food"])
                 .create_event(s!("b"), dt!("2019-07-23T13:00:00Z"), sl!["work"]),
         )
-        .patch(
-            "2",
-            Patch::new().add_start(s!("1"), s!("a"), dt!("2019-07-23T12:30:00Z")),
-        )
-        .patch(
-            "3",
-            Patch::new().remove_start(s!("1"), s!("b"), dt!("2019-07-23T13:00:00Z")),
-        );
+        .patch(p!(patch2).add_start(patch1.clone(), s!("a"), dt!("2019-07-23T12:30:00Z")))
+        .patch(p!(patch3).remove_start(patch1.clone(), s!("b"), dt!("2019-07-23T13:00:00Z")));
 
     let repo = Repository::from_store(store).unwrap();
     let current_timesheet = repo.timesheet();
