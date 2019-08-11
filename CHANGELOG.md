@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - `--time` argument to `start` command
+- `--config` has been added to specify where the config file is
+- User docs have been placed in <GUIDE.md>
+- The `augr-core` has been split out of `augr-cli` and been made into its own
+  crate
+- The `import` subcommand has been added to migrate data from the previous
+  format
 
 ### Changed
+- File format has changed to a patch based format
+    - This is a breaking change!
 - `Transitions` renamed to `Events`
 - `week` command renamed to `chart`
 
