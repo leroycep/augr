@@ -1,5 +1,6 @@
 mod chart;
 mod config;
+mod import;
 mod start;
 mod summary;
 mod tags;
@@ -37,6 +38,9 @@ enum Command {
 
     #[structopt(name = "tags")]
     Tags(tags::TagsCmd),
+
+    #[structopt(name = "import")]
+    Import(import::ImportCmd),
 }
 
 #[derive(Debug, Snafu)]
@@ -51,6 +55,9 @@ pub enum Error {
 
     #[snafu(display("Conflicts while merging patches: {:?}", conflicts))]
     MergeConflicts { conflicts: Vec<Conflict> },
+
+    #[snafu(display("Error importing data: {}", source))]
+    ImportError { source: Box<dyn std::error::Error> },
 }
 
 fn main() {
@@ -88,6 +95,14 @@ fn run() -> Result<(), Error> {
     match opt.cmd.unwrap_or(Command::default()) {
         Command::Start(subcmd) => {
             let patches = subcmd.exec(&timesheet);
+            for patch in patches {
+                let patch_ref = String::new();
+                let res = repo.add_patch(patch).unwrap();
+                println!("{}: {:?}", patch_ref, res);
+            }
+        }
+        Command::Import(subcmd) => {
+            let patches = subcmd.exec(&timesheet).context(ImportError {})?;
             for patch in patches {
                 let patch_ref = String::new();
                 let res = repo.add_patch(patch).unwrap();
