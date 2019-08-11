@@ -1,12 +1,9 @@
 mod chart;
 mod config;
-mod database;
 mod start;
 mod summary;
-mod sync_folder_db;
 mod tags;
 mod time_input;
-mod timesheet;
 
 use augr_core::{
     repository::{timesheet::Error as Conflict, Error as RepositoryError, Repository},
@@ -47,12 +44,6 @@ pub enum Error {
     #[snafu(display("Error getting config: {}", source))]
     GetConfig { source: config::Error },
 
-    #[snafu(display("Error reading data: {}", source))]
-    ReadData { source: sync_folder_db::Error },
-
-    #[snafu(display("Error writing data: {}", source))]
-    WriteData { source: sync_folder_db::Error },
-
     #[snafu(display("Errors reading repository: {:?}", errors))]
     ReadRepository {
         errors: Vec<RepositoryError<SyncFolderStoreError>>,
@@ -87,7 +78,7 @@ fn run() -> Result<(), Error> {
 
     let conf = config::load_config(&conf_file).context(GetConfig {})?;
 
-    let mut store = SyncFolderStore::new(conf.sync_folder.into(), conf.device_id).should_init(true);
+    let store = SyncFolderStore::new(conf.sync_folder.into(), conf.device_id).should_init(true);
     let mut repo = Repository::from_store(store).unwrap();
     let eventgraph = repo.timesheet();
     let timesheet = eventgraph

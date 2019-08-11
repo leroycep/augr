@@ -1,4 +1,4 @@
-use crate::{database::DataBase, format_duration, time_input::parse_default_local};
+use crate::{format_duration, time_input::parse_default_local};
 use augr_core::{Tag, Timesheet};
 use chrono::{DateTime, Local};
 use std::collections::BTreeSet;
