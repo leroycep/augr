@@ -59,7 +59,7 @@ impl SyncFolderStore {
     }
 
     pub fn should_init(mut self, should_init: bool) -> Self {
-        self.init = true;
+        self.init = should_init;
         self
     }
 
@@ -77,18 +77,17 @@ impl Store for SyncFolderStore {
     fn get_meta(&self) -> Result<Meta, Self::Error> {
         let path = self.meta_file_path();
 
-        let meta;
-        if path.exists() {
+        if path.exists() || !self.init {
             let contents = read_to_string(&path).context(ReadFile { path })?;
 
-            meta = toml::de::from_str(&contents).context(DeserializeMeta {
+            let meta = toml::de::from_str(&contents).context(DeserializeMeta {
                 device_id: self.device_id.clone(),
             })?;
-        } else {
-            meta = Meta::new();
-        }
 
-        Ok(meta)
+            Ok(meta)
+        } else {
+            Ok(Meta::new())
+        }
     }
 
     fn save_meta(&mut self, meta: &Meta) -> Result<(), Self::Error> {
