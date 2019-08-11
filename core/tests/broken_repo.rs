@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use snafu::Snafu;
 use std::collections::BTreeMap;
 
+#[derive(Debug)]
 struct MemStore {
     meta: Meta,
     patches: BTreeMap<String, Patch>,
@@ -103,14 +104,14 @@ fn unknown_event_ref_reported() {
             Patch::new().remove_start(s!("1"), s!("b"), dt!("2019-07-23T12:00:00Z")),
         );
 
-    let repo = Repository::from_store(store);
-    let errors = dbg!(repo
-        .get_current_timesheet()
-        .expect_err("patches to produce error"));
+    let errors = Repository::from_store(store).expect_err("patches to produce error");
 
-    assert!(errors.contains(&RepositoryError::EventNotFound {
+    assert!(errors.contains(&RepositoryError::PatchingTimesheet {
         patch: s!("2"),
-        event: s!("b")
+        conflicts: vec![TimesheetError::UnknownEvent {
+            patch: s!("2"),
+            event: s!("b")
+        }]
     }));
 }
 
@@ -118,10 +119,7 @@ fn unknown_event_ref_reported() {
 fn unknown_patch_reported() {
     let store = MemStore::new(meta!["2"]).patch("1", Patch::new());
 
-    let repo = Repository::from_store(store);
-    let errors = repo
-        .get_current_timesheet()
-        .expect_err("unkown patch to be reported");
+    let errors = Repository::from_store(store).unwrap_err();
 
     assert!(errors.contains(&RepositoryError::PatchNotFound {
         source: MemStoreError::PatchNotFound { patch_ref: s!("2") },
@@ -147,13 +145,11 @@ fn invalid_number_of_start_times() {
             Patch::new().remove_start(s!("1"), s!("b"), dt!("2019-07-23T13:00:00Z")),
         );
 
-    let repo = Repository::from_store(store);
-    let current_timesheet = dbg!(repo
-        .get_current_timesheet()
-        .expect("patches to build pathed timesheet"));
-    let errors = dbg!(current_timesheet
+    let repo = Repository::from_store(store).unwrap();
+    let current_timesheet = repo.timesheet();
+    let errors = current_timesheet
         .flatten()
-        .expect_err("flattening conflicted repository to report errors"));
+        .expect_err("flattening conflicted repository to report errors");
 
     assert!(errors.contains(&TimesheetError::FlattenEventError {
         source: EventError::MultipleStartTimes,

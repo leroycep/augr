@@ -8,6 +8,10 @@ mod tags;
 mod time_input;
 mod timesheet;
 
+use augr_core::{
+    repository::{timesheet::Error as Conflict, Error as RepositoryError, Repository},
+    store::{SyncFolderStore, SyncFolderStoreError},
+};
 use snafu::{ErrorCompat, ResultExt, Snafu};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -48,6 +52,14 @@ pub enum Error {
 
     #[snafu(display("Error writing data: {}", source))]
     WriteData { source: sync_folder_db::Error },
+
+    #[snafu(display("Errors reading repository: {:?}", errors))]
+    ReadRepository {
+        errors: Vec<RepositoryError<SyncFolderStoreError>>,
+    },
+
+    #[snafu(display("Conflicts while merging patches: {:?}", conflicts))]
+    MergeConflicts { conflicts: Vec<Conflict> },
 }
 
 fn main() {
@@ -75,17 +87,28 @@ fn run() -> Result<(), Error> {
 
     let conf = config::load_config(&conf_file).context(GetConfig {})?;
 
-    let mut db = sync_folder_db::SyncFolderDB::load(&conf.sync_folder, conf.device_id)
-        .context(ReadData {})?;
+    let mut store = SyncFolderStore::new(conf.sync_folder.into(), conf.device_id).should_init(true);
+    let mut repo = Repository::from_store(store).unwrap();
+    let eventgraph = repo.timesheet();
+    let timesheet = eventgraph
+        .flatten()
+        .map_err(|conflicts| Error::MergeConflicts { conflicts })?;
 
     match opt.cmd.unwrap_or(Command::default()) {
-        Command::Start(subcmd) => subcmd.exec(&mut db),
-        Command::Summary(subcmd) => subcmd.exec(&db),
-        Command::Chart(subcmd) => subcmd.exec(&db),
-        Command::Tags(subcmd) => subcmd.exec(&db),
-    }
+        Command::Start(subcmd) => {
+            let patches = subcmd.exec(&timesheet);
+            for patch in patches {
+                let patch_ref = String::new();
+                let res = repo.add_patch(patch).unwrap();
+                println!("{}: {:?}", patch_ref, res);
+            }
+        }
+        Command::Summary(subcmd) => subcmd.exec(&timesheet),
+        Command::Chart(subcmd) => subcmd.exec(&timesheet),
+        Command::Tags(subcmd) => subcmd.exec(&timesheet),
+    };
 
-    db.save().context(WriteData {})?;
+    repo.save_meta().unwrap();
 
     Ok(())
 }

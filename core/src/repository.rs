@@ -1,11 +1,11 @@
 pub mod event;
 pub mod timesheet;
 
-use crate::{EventRef, PatchRef, Store};
+use crate::{EventRef, Meta, Patch, PatchRef, Store};
 use event::PatchedEvent;
 use snafu::{ResultExt, Snafu};
 use std::collections::{BTreeSet, VecDeque};
-use timesheet::PatchedTimesheet;
+use timesheet::{Error as TimesheetError, PatchedTimesheet};
 
 #[derive(Eq, PartialEq, Debug, Snafu)]
 pub enum Error<IE>
@@ -15,25 +15,110 @@ where
     #[snafu(display("Unable to load metadata: {}", source))]
     LoadMeta { source: IE },
 
+    #[snafu(display("Unable to save metadata: {}", source))]
+    SaveMeta { source: IE },
+
+    #[snafu(display("Unable to save patch {} to disk: {}", patch, source))]
+    SavePatch { source: IE, patch: PatchRef },
+
     #[snafu(display("Unable to load patch {}: {}", patch, source))]
     PatchNotFound { source: IE, patch: PatchRef },
 
-    #[snafu(display("Event {}, referenced from patch {}, was not found", event, patch))]
-    EventNotFound { patch: PatchRef, event: EventRef },
+    #[snafu(display("Patch {} already loaded", patch))]
+    PatchAlreadyLoaded { patch: PatchRef },
+
+    #[snafu(display("Parents of patch {} are not loaded", patch))]
+    MissingParentPatches {
+        patch: PatchRef,
+        parents: Vec<PatchRef>,
+    },
+
+    #[snafu(display("Patch {} could not be applied to timesheet: {:?}", patch, conflicts))]
+    PatchingTimesheet {
+        conflicts: Vec<TimesheetError>,
+        patch: PatchRef,
+    },
 }
 
+#[derive(Debug)]
 pub struct Repository<S: Store> {
     store: S,
+    patches_loaded: BTreeSet<PatchRef>,
+    timesheet: PatchedTimesheet,
 }
 
-impl<S: Store> Repository<S> {
-    pub fn from_store(store: S) -> Self {
-        Self { store }
+impl<S> Repository<S>
+where
+    S: Store,
+    <S as Store>::Error: 'static,
+{
+    pub fn from_store(store: S) -> Result<Self, Vec<Error<S::Error>>> {
+        let mut repo = Self {
+            store,
+            patches_loaded: BTreeSet::new(),
+            timesheet: PatchedTimesheet::new(),
+        };
+        repo.load_all_patches()?;
+        Ok(repo)
     }
 
-    pub fn get_current_timesheet(&self) -> Result<PatchedTimesheet, Vec<Error<S::Error>>> {
-        let mut timesheet = PatchedTimesheet::new();
+    pub fn save_meta(&mut self) -> Result<(), Error<S::Error>> {
+        let mut meta = Meta::new();
+        for p in self.patches_loaded.iter() {
+            meta.add_patch(p.clone());
+        }
+        self.store.save_meta(&meta).context(SaveMeta {})
+    }
+
+    pub fn add_patch(&mut self, patch: Patch) -> Result<(), Error<S::Error>> {
+        self.load_patch(patch.clone())?;
+        self.store.add_patch(&patch).context(SavePatch {
+            patch: patch.patch_ref().clone(),
+        })?;
+        Ok(())
+    }
+
+    pub fn load_patch(&mut self, patch: Patch) -> Result<(), Error<S::Error>> {
+        // Don't apply patches twice
+        if self.patches_loaded.contains(patch.patch_ref()) {
+            return Err(Error::PatchAlreadyLoaded {
+                patch: patch.patch_ref().clone(),
+            });
+        }
+
+        // Check that all of the patches parent patches have been loaded
+        let mut missing_patches = Vec::new();
+        for parent_patch_ref in patch.parents() {
+            if !self.patches_loaded.contains(&parent_patch_ref) {
+                missing_patches.push(parent_patch_ref.clone());
+            }
+        }
+        if missing_patches.len() > 0 {
+            return Err(Error::MissingParentPatches {
+                patch: patch.patch_ref().clone(),
+                parents: missing_patches,
+            });
+        }
+
+        // Mark patch as loaded
+        self.patches_loaded.insert(patch.patch_ref().clone());
+
+        self.timesheet
+            .apply_patch(&patch)
+            .map_err(|conflicts| Error::PatchingTimesheet {
+                patch: patch.patch_ref().clone(),
+                conflicts,
+            })
+    }
+
+    pub fn timesheet(&self) -> &PatchedTimesheet {
+        &self.timesheet
+    }
+
+    fn load_all_patches(&mut self) -> Result<(), Vec<Error<S::Error>>> {
         let mut errors = Vec::new();
+
+        let mut error_on_loading: BTreeSet<PatchRef> = BTreeSet::new();
 
         let meta = self
             .store
@@ -41,13 +126,7 @@ impl<S: Store> Repository<S> {
             .context(LoadMeta {})
             .map_err(|e| vec![e])?;
         let mut patches_to_load: VecDeque<PatchRef> = meta.patches().cloned().collect();
-        let mut patches_loaded = BTreeSet::new();
         while let Some(patch_ref) = patches_to_load.pop_front() {
-            // Don't apply patches twice
-            if patches_loaded.contains(&patch_ref) {
-                continue;
-            }
-
             let patch = match self.store.get_patch(&patch_ref) {
                 Ok(p) => p,
                 Err(source) => {
@@ -59,79 +138,28 @@ impl<S: Store> Repository<S> {
                 }
             };
 
-            // Check that all of the patches parent patches have been loaded
-            let mut all_parents_loaded = true;
-            for parent_patch_ref in patch.parents() {
-                if !patches_loaded.contains(&parent_patch_ref) {
-                    all_parents_loaded = false;
-                    patches_to_load.push_back(parent_patch_ref.clone());
-                }
-            }
-            if !all_parents_loaded {
-                // If not all parents are loaded, put the current patch at the back and continue
-                patches_to_load.push_back(patch_ref);
-                continue;
-            }
-
-            // Mark patch as loaded
-            patches_loaded.insert(patch_ref.clone());
-
-            for start_added in patch.add_start.iter() {
-                let event = match timesheet.events.get_mut(&start_added.event) {
-                    Some(event) => event,
-                    None => {
-                        errors.push(Error::EventNotFound {
-                            patch: patch_ref.clone(),
-                            event: start_added.event.clone(),
-                        });
-                        continue;
+            match self.load_patch(patch) {
+                Ok(()) => {}
+                Err(Error::MissingParentPatches { parents, .. }) => {
+                    for parent in parents {
+                        if !error_on_loading.contains(&parent) {
+                            patches_to_load.push_back(parent);
+                        }
                     }
-                };
-                event.add_start(patch_ref.clone(), start_added.time.clone())
-            }
-            for start_removed in patch.remove_start.iter() {
-                let event = match timesheet.events.get_mut(&start_removed.event) {
-                    Some(event) => event,
-                    None => {
-                        errors.push(Error::EventNotFound {
-                            patch: patch_ref.clone(),
-                            event: start_removed.event.clone(),
-                        });
-                        continue;
-                    }
-                };
-                event.remove_start(start_removed.patch.clone(), start_removed.time.clone())
-            }
-
-            for tag_added in patch.add_tag.iter() {
-                let event = timesheet
-                    .events
-                    .get_mut(&tag_added.event)
-                    .expect("no event for add-tag");
-                event.add_tag(patch_ref.clone(), tag_added.tag.clone())
-            }
-            for tag_removed in patch.remove_tag.iter() {
-                let event = timesheet
-                    .events
-                    .get_mut(&tag_removed.event)
-                    .expect("no event for remove-tag");
-                event.remove_tag(tag_removed.patch.clone(), tag_removed.tag.clone())
-            }
-
-            for new_event in patch.create_event.iter() {
-                let mut event = PatchedEvent::new();
-                event.add_start(patch_ref.clone(), new_event.start);
-                for tag in new_event.tags.iter().cloned() {
-                    event.add_tag(patch_ref.clone(), tag);
+                    patches_to_load.push_back(patch_ref);
                 }
-                timesheet.events.insert(new_event.event.clone(), event);
+                Err(Error::PatchAlreadyLoaded { .. }) => {}
+                Err(patch_errors) => {
+                    errors.push(patch_errors);
+                    error_on_loading.insert(patch_ref);
+                }
             }
         }
 
         if errors.len() > 0 {
             Err(errors)
         } else {
-            Ok(timesheet)
+            Ok(())
         }
     }
 }

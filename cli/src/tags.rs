@@ -1,4 +1,4 @@
-use crate::{database::DataBase, timesheet::Tag};
+use augr_core::Timesheet;
 use std::collections::BTreeSet;
 use structopt::StructOpt;
 
@@ -6,14 +6,14 @@ use structopt::StructOpt;
 pub struct TagsCmd {}
 
 impl TagsCmd {
-    pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
-        let tags: BTreeSet<Tag> = timesheet
+    pub fn exec(&self, timesheet: &Timesheet) {
+        let tags = timesheet
             .events()
             .iter()
             .fold(BTreeSet::new(), |acc, x| acc.union(x.1).cloned().collect());
 
         for tag in tags {
-            println!("{}", tag.0);
+            println!("{}", tag);
         }
     }
 }

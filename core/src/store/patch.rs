@@ -1,14 +1,17 @@
 use crate::Tag;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-pub type PatchRef = String;
+pub type PatchRef = Uuid;
 type EventRef = String;
 type Set<T> = std::collections::HashSet<T>;
 
 #[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct Patch {
+    pub id: Uuid,
+
     #[serde(default)]
     pub add_start: Set<AddStart>,
 
@@ -68,12 +71,17 @@ pub struct CreateEvent {
 impl Patch {
     pub fn new() -> Self {
         Self {
+            id: Uuid::new_v4(),
             add_start: Set::new(),
             remove_start: Set::new(),
             add_tag: Set::new(),
             remove_tag: Set::new(),
             create_event: Set::new(),
         }
+    }
+
+    pub fn patch_ref(&self) -> &PatchRef {
+        &self.id
     }
 
     pub fn parents(&self) -> Set<PatchRef> {

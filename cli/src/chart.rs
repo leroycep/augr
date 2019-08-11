@@ -1,4 +1,4 @@
-use crate::{database::DataBase, timesheet::Tag};
+use augr_core::{Tag, Timesheet};
 use chrono::{offset::TimeZone, Local, NaiveDate, Utc};
 use std::collections::BTreeSet;
 use structopt::StructOpt;
@@ -19,7 +19,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub fn exec<DB: DataBase>(&self, timesheet: &DB) {
+    pub fn exec(&self, timesheet: &Timesheet) {
         let tags: BTreeSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
 
         let now = chrono::Local::now();

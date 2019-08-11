@@ -22,6 +22,7 @@ toml = "0.5"
 snafu = "0.4"
 parse_duration = "1.0"
 augr-core = { path = "../core" }
+uuid = "0.7"
 
 [badges]
 travis-ci = { repository = "geemili/augr" }

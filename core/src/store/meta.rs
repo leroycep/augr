@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 type Set<T> = std::collections::HashSet<T>;
 
 #[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct Meta {
     /// The patches that this Meta file depends on, which may exclude patches
     /// that are referenced as ancestors of some patch that is included.

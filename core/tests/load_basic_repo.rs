@@ -68,10 +68,10 @@ fn load_patches_into_store() {
 #[test]
 fn check_repository_state() {
     let repository = Repository::from_store(simple_store());
+    assert!(repository.is_ok());
+    let repository = repository.unwrap();
 
-    let current_timesheet = repository.get_current_timesheet();
-    assert!(current_timesheet.is_ok());
-    let current_timesheet = current_timesheet.unwrap();
+    let current_timesheet = repository.timesheet();
 
     let mut expected_timesheet = Timesheet::new();
     expected_timesheet.insert_event(Event::new(dt!("2019-07-23T12:30:00Z"), sl!["lunch"]));

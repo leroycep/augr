@@ -14,6 +14,6 @@ pub trait Store {
 
     fn get_meta(&self) -> Result<Meta, Self::Error>;
     fn save_meta(&mut self, meta: &Meta) -> Result<(), Self::Error>;
-    fn get_patch(&self, patch_ref: &str) -> Result<Patch, Self::Error>;
-    fn add_patch(&mut self, patch: &Patch) -> Result<PatchRef, Self::Error>;
+    fn get_patch(&self, patch_ref: &PatchRef) -> Result<Patch, Self::Error>;
+    fn add_patch(&mut self, patch: &Patch) -> Result<(), Self::Error>;
 }
