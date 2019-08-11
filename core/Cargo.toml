@@ -1,8 +1,10 @@
 [package]
 name = "augr-core"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["LeRoyce Pearson <leroycepearson@geemili.xyz>"]
 edition = "2018"
+license = "GPL-3.0-or-later"
+description = "The backend of a simple command line time tracking application"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
