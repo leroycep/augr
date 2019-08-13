@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2019-08-11
 ### Added
 - `--time` argument to `start` command
+- `summary --show-ends` will display when each event ended alongside the
+  duration
 - `--config` has been added to specify where the config file is
 - User docs have been placed in <GUIDE.md>
 - The `augr-core` has been split out of `augr-cli` and been made into its own
