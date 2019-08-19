@@ -1,5 +1,5 @@
-use crate::Tag;
-use chrono::{DateTime, Utc, Duration};
+use crate::{repository::timesheet::PatchedTimesheet, Tag};
+use chrono::{DateTime, Duration, Utc};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
@@ -8,8 +8,9 @@ pub struct Event {
     tags: BTreeSet<Tag>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
-pub struct Timesheet {
+#[derive(Clone, Debug)]
+pub struct Timesheet<'cl> {
+    patched_timesheet: &'cl PatchedTimesheet,
     events: BTreeMap<DateTime<Utc>, BTreeSet<Tag>>,
 }
 
@@ -35,9 +36,24 @@ impl Event {
     }
 }
 
-impl Timesheet {
-    pub fn new() -> Self {
+impl<'a, 'b> PartialEq<Timesheet<'b>> for Timesheet<'a> {
+    fn eq(&self, other: &Timesheet) -> bool {
+        self.events.eq(&other.events)
+    }
+}
+
+impl Eq for Timesheet<'_> {}
+
+impl PartialEq<BTreeMap<DateTime<Utc>, BTreeSet<Tag>>> for Timesheet<'_> {
+    fn eq(&self, other: &BTreeMap<DateTime<Utc>, BTreeSet<Tag>>) -> bool {
+        self.events.eq(other)
+    }
+}
+
+impl<'cl> Timesheet<'cl> {
+    pub fn new(patched_timesheet: &'cl PatchedTimesheet) -> Self {
         Self {
+            patched_timesheet,
             events: BTreeMap::new(),
         }
     }
@@ -80,5 +96,4 @@ impl Timesheet {
             .map(|(_time, tags)| tags)
             .last()
     }
-
 }

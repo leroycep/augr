@@ -113,8 +113,8 @@ impl PatchedTimesheet {
         }
     }
 
-    pub fn flatten(&self) -> Result<Timesheet, Vec<Error>> {
-        let mut timesheet = Timesheet::new();
+    pub fn flatten(&self) -> Result<Timesheet<'_>, Vec<Error>> {
+        let mut timesheet = Timesheet::new(&self);
         let mut errors = Vec::new();
         let mut event_datetimes_to_refs: BTreeMap<DateTime<Utc>, EventRef> = BTreeMap::new();
         for (event_ref, patched_event) in self.events.iter() {
