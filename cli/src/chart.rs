@@ -48,7 +48,7 @@ impl Cmd {
                 let cur_datetime = cur_date.and_hms(hour, minutes, 0);
                 let cur_tags = timesheet.tags_at_time(&cur_datetime.with_timezone(&Utc));
                 let matches = cur_tags
-                    .map(|x| tags.is_subset(x) && !x.is_empty())
+                    .map(|x| tags.is_subset(&x) && !x.is_empty())
                     .unwrap_or(false);
 
                 // Avoid highlighting the entire day

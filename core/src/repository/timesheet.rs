@@ -120,7 +120,7 @@ impl PatchedTimesheet {
         for (event_ref, patched_event) in self.events.iter() {
             match patched_event.flatten() {
                 Ok(event) => {
-                    if let Some(_event_a_tags) = timesheet.insert_event(event.clone()) {
+                    if let Some(_event_a_tags) = timesheet.event_at_time(event.start().clone(), event_ref.clone()) {
                         errors.push(Error::DuplicateEventTime {
                             event_a: event_datetimes_to_refs[event.start()].clone(),
                             event_b: event_ref.clone(),
