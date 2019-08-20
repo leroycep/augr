@@ -58,6 +58,10 @@ impl<'cl> Timesheet<'cl> {
         }
     }
 
+    pub fn get_patched_timesheet(&'cl self) -> &'cl PatchedTimesheet {
+        &self.patched_timesheet
+    }
+
     pub fn event_at_time(&mut self, start: DateTime<Utc>, event_ref: EventRef) -> Option<EventRef> {
         match self.event_starts.insert(start, event_ref) {
             None => None,

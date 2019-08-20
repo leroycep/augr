@@ -61,8 +61,7 @@ impl PatchedTimesheet {
             event.add_start(patch_ref.clone(), start_added.time.clone());
 
             // Update metadata
-            event.remove_patch_from_latest(&start_added.parent);
-            for parent in start_added.parents.iter() {
+            for parent in start_added.parents() {
                 event.remove_patch_from_latest(&parent);
             }
             event.add_patch_to_latest(patch_ref.clone());
@@ -82,7 +81,7 @@ impl PatchedTimesheet {
 
             // Update metadata
             event.remove_patch_from_latest(&start_removed.patch);
-            for parent in start_removed.parents.iter() {
+            for parent in start_removed.parents() {
                 event.remove_patch_from_latest(&parent);
             }
             event.add_patch_to_latest(patch_ref.clone());
@@ -96,8 +95,7 @@ impl PatchedTimesheet {
             event.add_tag(patch_ref.clone(), tag_added.tag.clone());
 
             // Update metadata
-            event.remove_patch_from_latest(&tag_added.parent);
-            for parent in tag_added.parents.iter() {
+            for parent in tag_added.parents() {
                 event.remove_patch_from_latest(&parent);
             }
             event.add_patch_to_latest(patch_ref.clone());
@@ -111,7 +109,7 @@ impl PatchedTimesheet {
 
             // Update metadata
             event.remove_patch_from_latest(&tag_removed.patch);
-            for parent in tag_removed.parents.iter() {
+            for parent in tag_removed.parents() {
                 event.remove_patch_from_latest(&parent);
             }
             event.add_patch_to_latest(patch_ref.clone());

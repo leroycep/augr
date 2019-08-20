@@ -1,6 +1,7 @@
 use crate::Tag;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use uuid::Uuid;
 
 pub type PatchRef = Uuid;
@@ -12,64 +13,62 @@ type Set<T> = std::collections::HashSet<T>;
 pub struct Patch {
     pub id: Uuid,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Set::is_empty")]
     pub add_start: Set<AddStart>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Set::is_empty")]
     pub remove_start: Set<RemoveStart>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Set::is_empty")]
     pub add_tag: Set<AddTag>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Set::is_empty")]
     pub remove_tag: Set<RemoveTag>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Set::is_empty")]
     pub create_event: Set<CreateEvent>,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct AddStart {
     #[serde(default)]
-    pub parents: Vec<PatchRef>,
-    pub parent: PatchRef,
+    pub parents: BTreeSet<PatchRef>,
     pub event: EventRef,
     pub time: DateTime<Utc>,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct RemoveStart {
     #[serde(default)]
-    pub parents: Vec<PatchRef>,
+    pub parents: Option<BTreeSet<PatchRef>>,
     pub patch: PatchRef,
     pub event: EventRef,
     pub time: DateTime<Utc>,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct AddTag {
     #[serde(default)]
-    pub parents: Vec<PatchRef>,
-    pub parent: PatchRef,
+    pub parents: BTreeSet<PatchRef>,
     pub event: EventRef,
     pub tag: Tag,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct RemoveTag {
     #[serde(default)]
-    pub parents: Vec<PatchRef>,
+    pub parents: Option<BTreeSet<PatchRef>>,
     pub patch: PatchRef,
     pub event: EventRef,
     pub tag: Tag,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub struct CreateEvent {
     pub event: EventRef,
     pub start: DateTime<Utc>,
@@ -104,24 +103,33 @@ impl Patch {
     }
 
     pub fn parents(&self) -> Set<PatchRef> {
-        self.add_start
-            .iter()
-            .map(|x| &x.parent)
-            .chain(self.remove_start.iter().map(|x| &x.patch))
-            .chain(self.add_tag.iter().map(|x| &x.parent))
-            .chain(self.remove_tag.iter().map(|x| &x.patch))
-            .chain(self.add_start.iter().flat_map(|x| x.parents.iter()))
-            .chain(self.remove_start.iter().flat_map(|x| x.parents.iter()))
-            .chain(self.add_tag.iter().flat_map(|x| x.parents.iter()))
-            .chain(self.remove_tag.iter().flat_map(|x| x.parents.iter()))
+        let add_start_parents = self.add_start.iter().flat_map(|x| x.parents.iter());
+        let remove_start_parents = self.remove_start.iter().map(|x| &x.patch).chain(
+            self.remove_start
+                .iter()
+                .flat_map(|x| x.parents.iter().flat_map(|s| s.iter())),
+        );
+        let remove_tag_parents = self.remove_tag.iter().map(|x| &x.patch).chain(
+            self.remove_tag
+                .iter()
+                .flat_map(|x| x.parents.iter().flat_map(|s| s.iter())),
+        );
+        let add_tag_parents = self.add_tag.iter().flat_map(|x| x.parents.iter());
+        add_start_parents
+            .chain(remove_start_parents)
+            .chain(remove_tag_parents)
+            .chain(add_tag_parents)
             .cloned()
             .collect()
     }
 
     pub fn add_start(mut self, parent: PatchRef, event: EventRef, time: DateTime<Utc>) -> Self {
         self.add_start.insert(AddStart {
-            parents: Vec::new(),
-            parent,
+            parents: {
+                let mut s = BTreeSet::new();
+                s.insert(parent);
+                s
+            },
             event,
             time,
         });
@@ -130,7 +138,7 @@ impl Patch {
 
     pub fn remove_start(mut self, patch: PatchRef, event: EventRef, time: DateTime<Utc>) -> Self {
         self.remove_start.insert(RemoveStart {
-            parents: Vec::new(),
+            parents: None,
             patch,
             event,
             time,
@@ -140,8 +148,11 @@ impl Patch {
 
     pub fn add_tag(mut self, parent: PatchRef, event: EventRef, tag: String) -> Self {
         self.add_tag.insert(AddTag {
-            parents: Vec::new(),
-            parent,
+            parents: {
+                let mut s = BTreeSet::new();
+                s.insert(parent);
+                s
+            },
             event,
             tag,
         });
@@ -150,7 +161,7 @@ impl Patch {
 
     pub fn remove_tag(mut self, patch: PatchRef, event: EventRef, tag: String) -> Self {
         self.remove_tag.insert(RemoveTag {
-            parents: Vec::new(),
+            parents: None,
             patch,
             event,
             tag,
@@ -189,6 +200,27 @@ impl Patch {
     }
 }
 
+impl AddStart {
+    pub fn parents(&self) -> impl Iterator<Item = &PatchRef> {
+        self.parents.iter()
+    }
+}
+impl RemoveStart {
+    pub fn parents(&self) -> impl Iterator<Item = &PatchRef> {
+        self.parents.iter().flat_map(|s| s.iter())
+    }
+}
+impl AddTag {
+    pub fn parents(&self) -> impl Iterator<Item = &PatchRef> {
+        self.parents.iter()
+    }
+}
+impl RemoveTag {
+    pub fn parents(&self) -> impl Iterator<Item = &PatchRef> {
+        self.parents.iter().flat_map(|s| s.iter())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -223,6 +255,24 @@ mod test {
     }
 
     #[test]
+    fn serialize_patch_with_add_tag_toml() {
+        let id = Uuid::parse_str("e39076fe-6b5a-4a7f-b927-7fc1df5ba275").unwrap();
+        let patch0 = Uuid::parse_str("fa5de1d9-aa11-49fa-b064-8128281a7d91").unwrap();
+        let event0 = Uuid::parse_str("0c435b19-4504-440c-abc7-f4e4d6a7d25f").unwrap();
+
+        let patch = Patch::with_id(id).add_start(
+            patch0.clone(),
+            event0.to_string(),
+            Utc.ymd(2019, 07, 24).and_hms(14, 0, 0),
+        );
+
+        let toml_str = "id = \"e39076fe-6b5a-4a7f-b927-7fc1df5ba275\"\n\n[[add-start]]\nparents = [\"fa5de1d9-aa11-49fa-b064-8128281a7d91\"]\nevent = \"0c435b19-4504-440c-abc7-f4e4d6a7d25f\"\ntime = \"2019-07-24T14:00:00Z\"\n".to_string();
+        let serialized = toml::ser::to_string(&patch).unwrap();
+        println!("{}", serialized);
+        assert_eq!(toml_str, serialized);
+    }
+
+    #[test]
     fn read_patch_with_parents() {
         let id = Uuid::parse_str("e39076fe-6b5a-4a7f-b927-7fc1df5ba275").unwrap();
         let patch0 = Uuid::parse_str("fa5de1d9-aa11-49fa-b064-8128281a7d91").unwrap();
@@ -231,7 +281,12 @@ mod test {
         let mut expected = Patch::with_id(id);
 
         let remove_start = RemoveStart {
-            parents: vec![patch0.clone(), patch1.clone()],
+            parents: {
+                let mut s = BTreeSet::new();
+                s.insert(patch0.clone());
+                s.insert(patch1.clone());
+                Some(s)
+            },
             patch: patch0.clone(),
             event: s!("a"),
             time: Utc.ymd(2019, 7, 24).and_hms(14, 0, 0),
@@ -278,7 +333,7 @@ mod test {
             id = "2a226f4d-60f2-493d-9e9a-d6c71d98b515"
 
             [[add-start]]
-            parent = "fa5de1d9-aa11-49fa-b064-8128281a7d91"
+            parents = ["fa5de1d9-aa11-49fa-b064-8128281a7d91"]
             event = "a"
             time = "2019-07-24T14:00:00+00:00"
 
@@ -288,7 +343,7 @@ mod test {
             time = "2019-07-24T14:00:00+00:00"
 
             [[add-tag]]
-            parent = "fa5de1d9-aa11-49fa-b064-8128281a7d91"
+            parents = ["fa5de1d9-aa11-49fa-b064-8128281a7d91"]
             event = "a"
             tag = "work"
 
