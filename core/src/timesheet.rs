@@ -16,6 +16,7 @@ pub struct Timesheet<'cl> {
 
 #[derive(Clone, Debug)]
 pub struct Segment {
+    pub event_ref: EventRef,
     pub start_time: DateTime<Utc>,
     pub tags: BTreeSet<Tag>,
     pub duration: Duration,
@@ -86,14 +87,16 @@ impl<'cl> Timesheet<'cl> {
     pub fn segments(&self) -> Vec<Segment> {
         let now = Utc::now();
         let end_cap_arr = [now];
-        self.events()
+        self.event_starts
             .iter()
-            .zip(self.events().keys().skip(1).chain(end_cap_arr.iter()))
-            .map(|(t, end_time)| {
-                let duration = end_time.signed_duration_since(*t.0);
+            .zip(self.event_starts.keys().skip(1).chain(end_cap_arr.iter()))
+            .map(|((start_time, event_ref), end_time)| {
+                let event = &self.patched_timesheet.events[event_ref];
+                let duration = end_time.signed_duration_since(*start_time);
                 Segment {
-                    start_time: t.0.clone(),
-                    tags: (*t.1).clone(),
+                    event_ref: event_ref.clone(),
+                    start_time: start_time.clone(),
+                    tags: event.tags().into_iter().map(|(_ref, tag)| tag).collect(),
                     duration,
                     end_time: end_time.clone(),
                 }
