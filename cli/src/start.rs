@@ -1,4 +1,3 @@
-use crate::time_input::parse_default_local;
 use augr_core::{Patch, Timesheet};
 use chrono::{DateTime, Local, Utc};
 use structopt::StructOpt;
@@ -6,7 +5,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 pub struct StartCmd {
     /// The time when you started
-    #[structopt(long = "time", parse(try_from_os_str = "parse_default_local"))]
+    #[structopt(long = "time", parse(try_from_os_str = crate::time_input::parse_default_local))]
     time: Option<DateTime<Local>>,
 
     /// A list of tags showing what you are doing

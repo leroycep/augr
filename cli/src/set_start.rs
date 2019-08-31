@@ -1,4 +1,3 @@
-use crate::time_input::parse_default_local;
 use augr_core::{
     store::patch::{AddStart, RemoveStart},
     EventRef, Patch, Timesheet,
@@ -13,7 +12,7 @@ pub struct Cmd {
     event: EventRef,
 
     /// The time when you started
-    #[structopt(parse(try_from_os_str = "parse_default_local"))]
+    #[structopt(parse(try_from_os_str = crate::time_input::parse_default_local))]
     time: DateTime<Local>,
 }
 

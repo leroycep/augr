@@ -8,7 +8,7 @@ pub struct Cmd {
     event: EventRef,
 
     /// A list of tags to append to the event
-    #[structopt(raw(required = "true"))]
+    #[structopt(required = true)]
     tags: Vec<String>,
 }
 
