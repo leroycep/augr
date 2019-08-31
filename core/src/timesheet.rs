@@ -1,5 +1,5 @@
-use crate::Tag;
-use chrono::{DateTime, Utc, Duration};
+use crate::{repository::timesheet::PatchedTimesheet, EventRef, Tag};
+use chrono::{DateTime, Duration, Utc};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
@@ -8,13 +8,15 @@ pub struct Event {
     tags: BTreeSet<Tag>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
-pub struct Timesheet {
-    events: BTreeMap<DateTime<Utc>, BTreeSet<Tag>>,
+#[derive(Clone, Debug)]
+pub struct Timesheet<'cl> {
+    patched_timesheet: &'cl PatchedTimesheet,
+    event_starts: BTreeMap<DateTime<Utc>, EventRef>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Segment {
+    pub event_ref: EventRef,
     pub start_time: DateTime<Utc>,
     pub tags: BTreeSet<Tag>,
     pub duration: Duration,
@@ -35,38 +37,66 @@ impl Event {
     }
 }
 
-impl Timesheet {
-    pub fn new() -> Self {
+impl<'a, 'b> PartialEq<Timesheet<'b>> for Timesheet<'a> {
+    fn eq(&self, other: &Timesheet) -> bool {
+        self.events().eq(&other.events())
+    }
+}
+
+impl Eq for Timesheet<'_> {}
+
+impl PartialEq<BTreeMap<DateTime<Utc>, BTreeSet<Tag>>> for Timesheet<'_> {
+    fn eq(&self, other: &BTreeMap<DateTime<Utc>, BTreeSet<Tag>>) -> bool {
+        self.events().eq(other)
+    }
+}
+
+impl<'cl> Timesheet<'cl> {
+    pub fn new(patched_timesheet: &'cl PatchedTimesheet) -> Self {
         Self {
-            events: BTreeMap::new(),
+            patched_timesheet,
+            event_starts: BTreeMap::new(),
         }
     }
 
-    pub fn insert_event(&mut self, event: Event) -> Option<Event> {
-        match self.events.insert(event.start.clone(), event.tags) {
+    pub fn get_patched_timesheet(&'cl self) -> &'cl PatchedTimesheet {
+        &self.patched_timesheet
+    }
+
+    pub fn event_at_time(&mut self, start: DateTime<Utc>, event_ref: EventRef) -> Option<EventRef> {
+        match self.event_starts.insert(start, event_ref) {
             None => None,
-            Some(previous_event_tags) => Some(Event {
-                start: event.start,
-                tags: previous_event_tags,
-            }),
+            Some(previous_event_ref) => Some(previous_event_ref),
         }
     }
 
-    pub fn events(&self) -> &BTreeMap<DateTime<Utc>, BTreeSet<Tag>> {
-        &self.events
+    pub fn events(&self) -> BTreeMap<DateTime<Utc>, BTreeSet<Tag>> {
+        self.event_starts
+            .iter()
+            .map(|(start, event_ref)| {
+                let tags = self.patched_timesheet.events[event_ref]
+                    .tags()
+                    .into_iter()
+                    .map(|(_patch_ref, tag)| tag)
+                    .collect();
+                (start.clone(), tags)
+            })
+            .collect()
     }
 
     pub fn segments(&self) -> Vec<Segment> {
         let now = Utc::now();
         let end_cap_arr = [now];
-        self.events
+        self.event_starts
             .iter()
-            .zip(self.events.keys().skip(1).chain(end_cap_arr.iter()))
-            .map(|(t, end_time)| {
-                let duration = end_time.signed_duration_since(*t.0);
+            .zip(self.event_starts.keys().skip(1).chain(end_cap_arr.iter()))
+            .map(|((start_time, event_ref), end_time)| {
+                let event = &self.patched_timesheet.events[event_ref];
+                let duration = end_time.signed_duration_since(*start_time);
                 Segment {
-                    start_time: t.0.clone(),
-                    tags: (*t.1).clone(),
+                    event_ref: event_ref.clone(),
+                    start_time: start_time.clone(),
+                    tags: event.tags().into_iter().map(|(_ref, tag)| tag).collect(),
                     duration,
                     end_time: end_time.clone(),
                 }
@@ -74,11 +104,16 @@ impl Timesheet {
             .collect()
     }
 
-    pub fn tags_at_time<'ts>(&'ts self, datetime: &DateTime<Utc>) -> Option<&'ts BTreeSet<Tag>> {
-        self.events
+    pub fn tags_at_time<'ts>(&'ts self, datetime: &DateTime<Utc>) -> Option<BTreeSet<Tag>> {
+        self.event_starts
             .range::<DateTime<_>, _>(..datetime)
-            .map(|(_time, tags)| tags)
             .last()
+            .map(|(_time, event_ref)| {
+                self.patched_timesheet.events[event_ref]
+                    .tags()
+                    .into_iter()
+                    .map(|(_patch_ref, tag)| tag)
+                    .collect()
+            })
     }
-
 }

@@ -9,6 +9,12 @@ pub struct PatchedEvent {
     starts_removed: BTreeSet<(PatchRef, DateTime<Utc>)>,
     tags_added: BTreeSet<(PatchRef, String)>,
     tags_removed: BTreeSet<(PatchRef, String)>,
+
+    /// Stores the latest patches that have been applied. Will generally be a
+    /// single patch, but if multiple patches were created asynchronously, there
+    /// may be multiple patches. Essentially, it stores every patch that has not
+    /// been referenced by another patch applied to it.
+    latest_patches: BTreeSet<PatchRef>,
 }
 
 #[derive(Eq, PartialEq, Debug, Snafu)]
@@ -27,7 +33,19 @@ impl PatchedEvent {
             starts_removed: BTreeSet::new(),
             tags_added: BTreeSet::new(),
             tags_removed: BTreeSet::new(),
+            latest_patches: BTreeSet::new(),
         }
+    }
+
+    /// Remove patch from latest_patches, meaning that it has been referenced by another
+    /// patch.
+    pub fn remove_patch_from_latest(&mut self, patch: &PatchRef) {
+        self.latest_patches.remove(patch);
+    }
+
+    /// Add patch to latest_patches, meaning that it has just been applied to this event.
+    pub fn add_patch_to_latest(&mut self, patch: PatchRef) {
+        self.latest_patches.insert(patch);
     }
 
     pub fn add_start(&mut self, patch: PatchRef, datetime: DateTime<Utc>) {
@@ -58,6 +76,10 @@ impl PatchedEvent {
             .difference(&self.tags_removed)
             .cloned()
             .collect()
+    }
+
+    pub fn latest_patches(&self) -> BTreeSet<PatchRef> {
+        self.latest_patches.clone()
     }
 
     pub fn flatten(&self) -> Result<Event, Error> {

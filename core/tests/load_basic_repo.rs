@@ -1,5 +1,6 @@
-use augr_core::{store::SyncFolderStore, Event, Meta, Patch, Repository, Store, Timesheet};
+use augr_core::{store::SyncFolderStore, Meta, Patch, Repository, Store, Tag};
 use chrono::{DateTime, Utc};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 macro_rules! dt {
@@ -69,12 +70,11 @@ fn check_repository_state() {
 
     let current_timesheet = repository.timesheet();
 
-    let mut expected_timesheet = Timesheet::new();
-    expected_timesheet.insert_event(Event::new(dt!("2019-07-23T12:30:00Z"), sl!["lunch"]));
-    expected_timesheet.insert_event(Event::new(
-        dt!("2019-07-23T13:00:00Z"),
-        sl!["work", "awesome-project"],
-    ));
+    let mut expected_timesheet: BTreeMap<DateTime<Utc>, BTreeSet<Tag>> = BTreeMap::new();
+    expected_timesheet.insert(dt!("2019-07-23T12:30:00Z"), sl!["lunch"]);
+    expected_timesheet.insert(dt!("2019-07-23T13:00:00Z"), sl!["work", "awesome-project"]);
 
-    assert_eq!(current_timesheet.flatten(), Ok(expected_timesheet));
+    let timesheet = current_timesheet.flatten();
+    assert!(timesheet.is_ok());
+    assert!(timesheet.unwrap().eq(&expected_timesheet));
 }

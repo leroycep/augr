@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Added
+- The `--refs` flag will make the summary list an Event's reference in the tags
+- The `tag` command will add tags to previous events
+- The `set-start` command will change the time an event starts
+
 ## [0.2.0] - 2019-08-11
 ### Added
 - `--time` argument to `start` command

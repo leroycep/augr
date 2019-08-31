@@ -12,6 +12,10 @@ pub struct SummaryCmd {
     #[structopt(long = "show-ends")]
     show_ends: bool,
 
+    /// Show event references as tags in output
+    #[structopt(long = "refs")]
+    show_refs: bool,
+
     #[structopt(long = "start", parse(try_from_os_str = "parse_default_local"))]
     start: Option<DateTime<Local>>,
 
@@ -58,10 +62,17 @@ impl SummaryCmd {
             };
             let start_time = seg_datetime.format("%H:%M");
             let end_time = seg_end_datetime.format("%H:%M");
+
+            let reference = match self.show_refs {
+                true => Some(segment.event_ref.as_str()),
+                false => None,
+            };
+
             let tags_str = segment
                 .tags
                 .iter()
                 .map(|s| &**s)
+                .chain(reference)
                 .collect::<Vec<&str>>()
                 .join(" ");
 
