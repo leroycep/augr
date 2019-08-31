@@ -11,12 +11,12 @@ description = "The backend of a simple command line time tracking application"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = [ "derive" ] }
-snafu = "0.4"
+snafu = "0.5"
 toml = "0.5"
 uuid = { version = "0.7", features = ["serde", "v4"] }
 
 flame = { version = "0.2.2", optional = true }
-flamer = { version = "0.3", optional = true }
+flamer = { version = "0.4", optional = true }
 
 [features]
 default = []
