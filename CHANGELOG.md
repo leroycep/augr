@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reduced cloning and redundant work to make `augr` 10x faster
     - Results may vary ;)
 
+### Removed
+- `parent` field from `AddStart` and `AddTag`. It has been replaced with the
+  more general `parents` field. This change will only affect people who are
+  editing files without `augr`.
+
 ## [0.2.0] - 2019-08-11
 ### Added
 - `--time` argument to `start` command
