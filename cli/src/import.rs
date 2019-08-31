@@ -27,7 +27,7 @@ impl ImportCmd {
     pub fn exec(&self, _timesheet: &Timesheet) -> Result<Vec<Patch>, Box<dyn Error>> {
         let patches = match self.format {
             Format::OriginalLineFormat => {
-                line_format::import(&self.path).map_err(|e| Box::new(e))?
+                line_format::import(&self.path).map_err(Box::new)?
             }
         };
         Ok(patches)

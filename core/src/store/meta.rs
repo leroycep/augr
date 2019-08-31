@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 type Set<T> = std::collections::HashSet<T>;
 
-#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Meta {
     /// The patches that this Meta file depends on, which may exclude patches

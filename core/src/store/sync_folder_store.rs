@@ -58,7 +58,7 @@ impl SyncFolderStore {
             init: false,
             device_id,
             patch_folder: root_folder.join("patches"),
-            root_folder: root_folder,
+            root_folder,
         }
     }
 

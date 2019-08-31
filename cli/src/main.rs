@@ -109,7 +109,7 @@ fn run() -> Result<(), Error> {
     #[cfg(feature = "flame_it")]
     flame::start("load repository");
 
-    let store = SyncFolderStore::new(conf.sync_folder.into(), conf.device_id).should_init(true);
+    let store = SyncFolderStore::new(conf.sync_folder, conf.device_id).should_init(true);
     let mut repo = Repository::from_store(store).unwrap();
 
     #[cfg(feature = "flame_it")]
@@ -141,7 +141,7 @@ fn run() -> Result<(), Error> {
     // Run command
     #[cfg(feature = "flame_it")]
     flame::start("command");
-    match opt.cmd.unwrap_or(Command::default()) {
+    match opt.cmd.unwrap_or_default() {
         Command::Start(subcmd) => {
             let patches = subcmd.exec(&timesheet);
             for patch in patches {

@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 /// This representation of a timesheet is an intermediate form that allows
 /// an event to have multiple starts
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct PatchedTimesheet {
     pub events: BTreeMap<EventRef, PatchedEvent>,
 }
@@ -55,7 +55,7 @@ impl PatchedTimesheet {
                 .events
                 .get_mut(&start_added.event)
                 .expect("valid patch");
-            event.add_start(patch_ref.clone(), start_added.time.clone());
+            event.add_start(*patch_ref, start_added.time);
 
             // Update metadata
             for parent in start_added.parents() {
@@ -68,7 +68,7 @@ impl PatchedTimesheet {
                 .events
                 .get_mut(&start_removed.event)
                 .expect("valid patch");
-            event.remove_start(start_removed.patch.clone(), start_removed.time.clone());
+            event.remove_start(start_removed.patch, start_removed.time);
 
             // Update metadata
             event.remove_patch_from_latest(&start_removed.patch);
@@ -79,10 +79,7 @@ impl PatchedTimesheet {
         }
 
         for tag_added in patch.add_tag.iter() {
-            let event = self
-                .events
-                .get_mut(&tag_added.event)
-                .expect("valid patch");
+            let event = self.events.get_mut(&tag_added.event).expect("valid patch");
             event.add_tag(patch_ref.clone(), tag_added.tag.clone());
 
             // Update metadata
@@ -96,7 +93,7 @@ impl PatchedTimesheet {
                 .events
                 .get_mut(&tag_removed.event)
                 .expect("valid patch");
-            event.remove_tag(tag_removed.patch.clone(), tag_removed.tag.clone());
+            event.remove_tag(tag_removed.patch, tag_removed.tag.clone());
 
             // Update metadata
             event.remove_patch_from_latest(&tag_removed.patch);
@@ -133,7 +130,7 @@ impl PatchedTimesheet {
                 Some(_event) => {}
                 None => {
                     errors.push(Error::UnknownEvent {
-                        patch: patch_ref.clone(),
+                        patch: *patch_ref,
                         event: start_added.event.clone(),
                     });
                     continue;
@@ -145,7 +142,7 @@ impl PatchedTimesheet {
                 Some(_event) => {}
                 None => {
                     errors.push(Error::UnknownEvent {
-                        patch: patch_ref.clone(),
+                        patch: *patch_ref,
                         event: start_removed.event.clone(),
                     });
                     continue;
@@ -165,17 +162,14 @@ impl PatchedTimesheet {
         }
 
         for new_event in patch.create_event.iter() {
-            match self.events.get(&new_event.event) {
-                Some(_previous_event) => {
-                    errors.push(Error::DuplicateEventId {
-                        id: new_event.event.clone(),
-                    });
-                }
-                None => {}
+            if self.events.get(&new_event.event).is_some() {
+                errors.push(Error::DuplicateEventId {
+                    id: new_event.event.clone(),
+                });
             }
         }
 
-        if errors.len() >= 1 {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
@@ -208,7 +202,7 @@ impl PatchedTimesheet {
             }
         }
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(timesheet)

@@ -79,7 +79,7 @@ impl<'cl> Timesheet<'cl> {
                     .into_iter()
                     .map(|(_patch_ref, tag)| tag)
                     .collect();
-                (start.clone(), tags)
+                (*start, tags)
             })
             .collect()
     }
@@ -95,10 +95,10 @@ impl<'cl> Timesheet<'cl> {
                 let duration = end_time.signed_duration_since(*start_time);
                 Segment {
                     event_ref: event_ref.clone(),
-                    start_time: start_time.clone(),
+                    start_time: *start_time,
                     tags: event.tags().into_iter().map(|(_ref, tag)| tag).collect(),
                     duration,
-                    end_time: end_time.clone(),
+                    end_time: *end_time,
                 }
             })
             .collect()

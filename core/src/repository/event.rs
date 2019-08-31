@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use snafu::{ensure, Snafu};
 use std::collections::BTreeSet;
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct PatchedEvent {
     starts_added: BTreeSet<(PatchRef, DateTime<Utc>)>,
     starts_removed: BTreeSet<(PatchRef, DateTime<Utc>)>,
@@ -85,7 +85,7 @@ impl PatchedEvent {
     pub fn flatten(&self) -> Result<Event, Error> {
         let starts = self.starts();
         ensure!(starts.len() < 2, MultipleStartTimes);
-        ensure!(starts.len() > 0, NoStartTimes);
+        ensure!(!starts.is_empty(), NoStartTimes);
         let start = starts
             .iter()
             .map(|patch_and_dt| patch_and_dt.1)

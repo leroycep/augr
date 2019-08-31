@@ -37,75 +37,60 @@ pub fn parse_default_local(text: &OsStr) -> Result<DateTime<Local>, OsString> {
 
 pub fn parse<C: Context>(c: &C, text: &str) -> Result<DateTime<C::TZ>, ()> {
     attempt!(parse_datetime(c.tz(), text));
-    match parse_date(c, text) {
-        Ok(date) => return Ok(date.and_hms(0, 0, 0)),
-        Err(_) => {}
+    if let Ok(date) = parse_date(c, text) {
+        return Ok(date.and_hms(0, 0, 0));
     }
-    match parse_time(c, text) {
-        Ok(time) => {
-            if time <= c.now().time() {
-                return Ok(c.now().date().and_time(time).unwrap());
-            } else {
-                let yesterday = c.now().date() - Duration::days(1);
-                return Ok(yesterday.and_time(time).unwrap());
-            }
+    if let Ok(time) = parse_time(c, text) {
+        if time <= c.now().time() {
+            return Ok(c.now().date().and_time(time).unwrap());
+        } else {
+            let yesterday = c.now().date() - Duration::days(1);
+            return Ok(yesterday.and_time(time).unwrap());
         }
-        Err(_) => {}
     }
-    match ::parse_duration::parse(text).map(Duration::from_std) {
-        Ok(Ok(duration)) => return Ok(c.now().clone() - duration),
-        _ => {}
+    if let Ok(Ok(duration)) = ::parse_duration::parse(text).map(Duration::from_std) {
+        return Ok(c.now().clone() - duration);
     }
     Err(())
 }
 
 fn parse_datetime<T: TimeZone>(tz: &T, text: &str) -> Result<DateTime<T>, ()> {
-    match DateTime::parse_from_rfc3339(text) {
-        Ok(datetime) => return Ok(datetime.with_timezone(tz)),
-        Err(_) => {}
+    if let Ok(datetime) = DateTime::parse_from_rfc3339(text) {
+        return Ok(datetime.with_timezone(tz));
     }
     attempt!(tz.datetime_from_str(text, "%Y-%m-%dT%H:%M:%S"));
     Err(())
 }
 
 fn parse_date<C: Context>(c: &C, text: &str) -> Result<Date<C::TZ>, ()> {
-    match format_parse(fmts::FULL_DATE, text) {
-        Ok(parsed) => {
-            return Ok(c.tz().ymd(
-                parsed.year.unwrap(),
-                parsed.month.unwrap(),
-                parsed.day.unwrap(),
-            ))
-        }
-        Err(_) => {}
+    if let Ok(parsed) = format_parse(fmts::FULL_DATE, text) {
+        return Ok(c.tz().ymd(
+            parsed.year.unwrap(),
+            parsed.month.unwrap(),
+            parsed.day.unwrap(),
+        ));
     }
-    match format_parse(fmts::PARTIAL_DATE, text) {
-        Ok(parsed) => {
-            return Ok(c.tz().ymd(
-                c.now().with_timezone(c.tz()).year(),
-                parsed.month.unwrap(),
-                parsed.day.unwrap(),
-            ))
-        }
-        Err(_) => {}
+    if let Ok(parsed) = format_parse(fmts::PARTIAL_DATE, text) {
+        return Ok(c.tz().ymd(
+            c.now().with_timezone(c.tz()).year(),
+            parsed.month.unwrap(),
+            parsed.day.unwrap(),
+        ));
     }
     Err(())
 }
 
 fn parse_time<C: Context>(_c: &C, text: &str) -> Result<NaiveTime, ()> {
-    match format_parse(fmts::HOUR_AND_MINUTE, text) {
-        Ok(mut parsed) => {
-            let _ = parsed.set_second(0);
-            return parsed.to_naive_time().map_err(|_| ());
-        }
-        Err(_) => {}
+    if let Ok(mut parsed) = format_parse(fmts::HOUR_AND_MINUTE, text) {
+        let _ = parsed.set_second(0);
+        return parsed.to_naive_time().map_err(|_| ());
     }
     Err(())
 }
 
 fn format_parse(fmt: &[chrono::format::Item], text: &str) -> Result<chrono::format::Parsed, ()> {
     use chrono::format;
-    let fmt_iter = fmt.iter().map(|v| v.clone());
+    let fmt_iter = fmt.iter().cloned();
     let mut parsed = format::Parsed::new();
     match format::parse(&mut parsed, text, fmt_iter) {
         Ok(()) => Ok(parsed),

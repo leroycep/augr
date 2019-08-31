@@ -18,8 +18,8 @@ impl StartCmd {
         let now = self
             .time
             .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or(Utc::now());
-        let tags = self.tags.iter().cloned().collect();
+            .unwrap_or_else(Utc::now);
+        let tags = self.tags.to_vec();
 
         vec![Patch::new().create_event(event_ref, now, tags)]
     }

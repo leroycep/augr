@@ -77,7 +77,7 @@ where
     pub fn add_patch(&mut self, patch: Patch) -> Result<(), Error<S::Error>> {
         self.load_patch(patch.clone())?;
         self.store.add_patch(&patch).context(SavePatch {
-            patch: patch.patch_ref().clone(),
+            patch: *patch.patch_ref(),
         })?;
         Ok(())
     }
@@ -87,7 +87,7 @@ where
         // Don't apply patches twice
         if self.patches_loaded.contains(patch.patch_ref()) {
             return Err(Error::PatchAlreadyLoaded {
-                patch: patch.patch_ref().clone(),
+                patch: *patch.patch_ref(),
             });
         }
 
@@ -95,12 +95,12 @@ where
         let mut missing_patches = Vec::new();
         for parent_patch_ref in patch.parents() {
             if !self.patches_loaded.contains(&parent_patch_ref) {
-                missing_patches.push(parent_patch_ref.clone());
+                missing_patches.push(parent_patch_ref);
             }
         }
-        if missing_patches.len() > 0 {
+        if !missing_patches.is_empty() {
             return Err(Error::MissingParentPatches {
-                patch: patch.patch_ref().clone(),
+                patch: *patch.patch_ref(),
                 parents: missing_patches,
             });
         }
@@ -111,7 +111,7 @@ where
         self.timesheet
             .apply_patch(&patch)
             .map_err(|conflicts| Error::PatchingTimesheet {
-                patch: patch.patch_ref().clone(),
+                patch: *patch.patch_ref(),
                 conflicts,
             })
     }
@@ -141,7 +141,7 @@ where
                 Err(source) => {
                     errors.push(Error::PatchNotFound {
                         source,
-                        patch: patch_ref.clone(),
+                        patch: patch_ref,
                     });
                     continue;
                 }
@@ -165,7 +165,7 @@ where
             }
         }
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             Err(errors)
         } else {
             Ok(())
@@ -199,7 +199,7 @@ impl Repository<SyncFolderStore> {
             .filter_map(|x| x.ok())
             .flat_map(|meta| {
                 meta.patches()
-                    .map(|x| x.clone())
+                    .copied()
                     .collect::<Vec<_>>()
                     .into_iter()
             })

@@ -200,6 +200,12 @@ impl Patch {
     }
 }
 
+impl Default for Patch {
+    fn default() -> Self {
+        Patch::new()
+    }
+}
+
 impl AddStart {
     pub fn parents(&self) -> impl Iterator<Item = &PatchRef> {
         self.parents.iter()

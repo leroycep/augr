@@ -26,10 +26,10 @@ pub struct SummaryCmd {
 impl SummaryCmd {
     #[cfg_attr(feature = "flame_it", flame)]
     pub fn exec(&self, timesheet: &Timesheet) {
-        let tags: BTreeSet<Tag> = self.tags.iter().map(|s| s.clone()).collect();
+        let tags: BTreeSet<Tag> = self.tags.iter().cloned().collect();
 
-        let start = self.start.unwrap_or(default_start());
-        let end = self.end.unwrap_or(default_end());
+        let start = self.start.unwrap_or_else(default_start);
+        let end = self.end.unwrap_or_else(default_end);
         let segments = timesheet
             .segments()
             .into_iter()
@@ -64,9 +64,10 @@ impl SummaryCmd {
             let start_time = seg_datetime.format("%H:%M");
             let end_time = seg_end_datetime.format("%H:%M");
 
-            let reference = match self.show_refs {
-                true => Some(segment.event_ref.as_str()),
-                false => None,
+            let reference = if self.show_refs {
+                Some(segment.event_ref.as_str())
+            } else {
+                None
             };
 
             let tags_str = segment
