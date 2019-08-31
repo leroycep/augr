@@ -24,6 +24,7 @@ pub struct SummaryCmd {
 }
 
 impl SummaryCmd {
+    #[cfg_attr(feature = "flame_it", flame)]
     pub fn exec(&self, timesheet: &Timesheet) {
         let tags: BTreeSet<Tag> = self.tags.iter().map(|s| s.clone()).collect();
 

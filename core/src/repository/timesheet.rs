@@ -42,22 +42,19 @@ impl PatchedTimesheet {
         }
     }
 
+    #[cfg_attr(feature = "flame_it", flame)]
     pub fn apply_patch(&mut self, patch: &Patch) -> Result<(), Vec<Error>> {
-        let mut new_state = self.clone();
-        let mut errors = Vec::new();
+        // Verify patch. From this point on, we should have no errors, and `expect("valid patch")` indicates that
+        if let Err(errors) = self.verify_patch(patch) {
+            return Err(errors);
+        }
         let patch_ref = patch.patch_ref();
 
         for start_added in patch.add_start.iter() {
-            let event = match new_state.events.get_mut(&start_added.event) {
-                Some(event) => event,
-                None => {
-                    errors.push(Error::UnknownEvent {
-                        patch: patch_ref.clone(),
-                        event: start_added.event.clone(),
-                    });
-                    continue;
-                }
-            };
+            let event = self
+                .events
+                .get_mut(&start_added.event)
+                .expect("valid patch");
             event.add_start(patch_ref.clone(), start_added.time.clone());
 
             // Update metadata
@@ -67,16 +64,10 @@ impl PatchedTimesheet {
             event.add_patch_to_latest(patch_ref.clone());
         }
         for start_removed in patch.remove_start.iter() {
-            let event = match new_state.events.get_mut(&start_removed.event) {
-                Some(event) => event,
-                None => {
-                    errors.push(Error::UnknownEvent {
-                        patch: patch_ref.clone(),
-                        event: start_removed.event.clone(),
-                    });
-                    continue;
-                }
-            };
+            let event = self
+                .events
+                .get_mut(&start_removed.event)
+                .expect("valid patch");
             event.remove_start(start_removed.patch.clone(), start_removed.time.clone());
 
             // Update metadata
@@ -88,10 +79,10 @@ impl PatchedTimesheet {
         }
 
         for tag_added in patch.add_tag.iter() {
-            let event = new_state
+            let event = self
                 .events
                 .get_mut(&tag_added.event)
-                .expect("no event for add-tag");
+                .expect("valid patch");
             event.add_tag(patch_ref.clone(), tag_added.tag.clone());
 
             // Update metadata
@@ -101,10 +92,10 @@ impl PatchedTimesheet {
             event.add_patch_to_latest(patch_ref.clone());
         }
         for tag_removed in patch.remove_tag.iter() {
-            let event = new_state
+            let event = self
                 .events
                 .get_mut(&tag_removed.event)
-                .expect("no event for remove-tag");
+                .expect("valid patch");
             event.remove_tag(tag_removed.patch.clone(), tag_removed.tag.clone());
 
             // Update metadata
@@ -125,7 +116,56 @@ impl PatchedTimesheet {
             // Update metadata
             event.add_patch_to_latest(patch_ref.clone());
 
-            match new_state.events.insert(new_event.event.clone(), event) {
+            let prev_entry = self.events.insert(new_event.event.clone(), event);
+            assert!(prev_entry.is_none());
+        }
+
+        Ok(())
+    }
+
+    #[cfg_attr(feature = "flame_it", flame)]
+    fn verify_patch(&self, patch: &Patch) -> Result<(), Vec<Error>> {
+        let mut errors = Vec::new();
+        let patch_ref = patch.patch_ref();
+
+        for start_added in patch.add_start.iter() {
+            match self.events.get(&start_added.event) {
+                Some(_event) => {}
+                None => {
+                    errors.push(Error::UnknownEvent {
+                        patch: patch_ref.clone(),
+                        event: start_added.event.clone(),
+                    });
+                    continue;
+                }
+            };
+        }
+        for start_removed in patch.remove_start.iter() {
+            match self.events.get(&start_removed.event) {
+                Some(_event) => {}
+                None => {
+                    errors.push(Error::UnknownEvent {
+                        patch: patch_ref.clone(),
+                        event: start_removed.event.clone(),
+                    });
+                    continue;
+                }
+            };
+        }
+
+        for tag_added in patch.add_tag.iter() {
+            self.events
+                .get(&tag_added.event)
+                .expect("no event for add-tag");
+        }
+        for tag_removed in patch.remove_tag.iter() {
+            self.events
+                .get(&tag_removed.event)
+                .expect("no event for remove-tag");
+        }
+
+        for new_event in patch.create_event.iter() {
+            match self.events.get(&new_event.event) {
                 Some(_previous_event) => {
                     errors.push(Error::DuplicateEventId {
                         id: new_event.event.clone(),
@@ -138,7 +178,6 @@ impl PatchedTimesheet {
         if errors.len() >= 1 {
             Err(errors)
         } else {
-            self.events = new_state.events;
             Ok(())
         }
     }
