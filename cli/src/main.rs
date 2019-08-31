@@ -21,7 +21,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "augr")]
+#[structopt(name = "augr", about, author)]
 struct Opt {
     /// Use the config file at the specified path. Defaults to `$XDG_CONFIG_HOME/augr/config.toml`.
     #[structopt(long = "config")]
