@@ -33,25 +33,32 @@ struct Opt {
 
 #[derive(StructOpt, Debug)]
 enum Command {
-    #[structopt(name = "start")]
+    /// Add an event to the timesheet; start defaults to the current time
+    #[structopt(no_version, name = "start")]
     Start(start::StartCmd),
 
-    #[structopt(name = "summary")]
+    /// Show a table tracked time; defaults to only showing time tracked today
+    #[structopt(no_version, name = "summary")]
     Summary(summary::SummaryCmd),
 
-    #[structopt(name = "chart")]
+    /// Show an ascii art chart of tracked time
+    #[structopt(no_version, name = "chart")]
     Chart(chart::Cmd),
 
-    #[structopt(name = "tags")]
+    /// Get a list of all the different tags that have been used.
+    #[structopt(no_version, name = "tags")]
     Tags(tags::TagsCmd),
 
-    #[structopt(name = "tag")]
+    /// Add tags to an existing event
+    #[structopt(no_version, name = "tag")]
     Tag(tag::Cmd),
 
-    #[structopt(name = "set-start")]
+    /// Change when an event started
+    #[structopt(no_version, name = "set-start")]
     SetStart(set_start::Cmd),
 
-    #[structopt(name = "import")]
+    /// Import data from version 0.1 of augr
+    #[structopt(no_version, name = "import")]
     Import(import::ImportCmd),
 }
 

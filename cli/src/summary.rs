@@ -9,6 +9,7 @@ pub struct SummaryCmd {
     /// A list of tags to filter against
     tags: Vec<String>,
 
+    /// Show the time that each event ended
     #[structopt(long = "show-ends")]
     show_ends: bool,
 
@@ -16,9 +17,11 @@ pub struct SummaryCmd {
     #[structopt(long = "refs")]
     show_refs: bool,
 
+    /// The datetime at which to begin showing events
     #[structopt(long = "start", parse(try_from_os_str = parse_default_local))]
     start: Option<DateTime<Local>>,
 
+    /// The datetime at which to stop showing events
     #[structopt(long = "end", parse(try_from_os_str = parse_default_local))]
     end: Option<DateTime<Local>>,
 }
