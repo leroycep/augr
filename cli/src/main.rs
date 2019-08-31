@@ -1,6 +1,7 @@
 mod chart;
 mod config;
 mod import;
+mod set_start;
 mod start;
 mod summary;
 mod tag;
@@ -42,6 +43,9 @@ enum Command {
 
     #[structopt(name = "tag")]
     Tag(tag::Cmd),
+
+    #[structopt(name = "set-start")]
+    SetStart(set_start::Cmd),
 
     #[structopt(name = "import")]
     Import(import::ImportCmd),
@@ -132,6 +136,16 @@ fn run() -> Result<(), Error> {
         Command::Chart(subcmd) => subcmd.exec(&timesheet),
         Command::Tags(subcmd) => subcmd.exec(&timesheet),
         Command::Tag(subcmd) => {
+            let patches = subcmd
+                .exec(&timesheet)
+                .map_err(|e| Box::new(e).into())
+                .context(GeneralError {})?;
+            for patch in patches {
+                println!("{}", patch.patch_ref());
+                repo.add_patch(patch).unwrap();
+            }
+        }
+        Command::SetStart(subcmd) => {
             let patches = subcmd
                 .exec(&timesheet)
                 .map_err(|e| Box::new(e).into())
