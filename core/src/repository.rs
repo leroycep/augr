@@ -197,12 +197,7 @@ impl Repository<SyncFolderStore> {
 
         let patches_to_load: Vec<PatchRef> = metas
             .filter_map(|x| x.ok())
-            .flat_map(|meta| {
-                meta.patches()
-                    .copied()
-                    .collect::<Vec<_>>()
-                    .into_iter()
-            })
+            .flat_map(|meta| meta.patches().copied().collect::<Vec<_>>().into_iter())
             .collect();
 
         self.load_patches(patches_to_load.into_iter())

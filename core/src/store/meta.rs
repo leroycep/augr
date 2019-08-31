@@ -35,10 +35,13 @@ mod test {
     #[test]
     fn read_from_toml() {
         let expected = Meta {
-            patches: ["c10350e8-3f30-4d27-b120-8ee079e256d9", "7a826905-7a3e-430d-9d54-5af08ecb482c"]
-                .into_iter()
-                .map(|s| Uuid::parse_str(s).unwrap())
-                .collect(),
+            patches: [
+                "c10350e8-3f30-4d27-b120-8ee079e256d9",
+                "7a826905-7a3e-430d-9d54-5af08ecb482c",
+            ]
+            .into_iter()
+            .map(|s| Uuid::parse_str(s).unwrap())
+            .collect(),
         };
         let toml_str = r#"
             patches = ["c10350e8-3f30-4d27-b120-8ee079e256d9", "7a826905-7a3e-430d-9d54-5af08ecb482c"]
