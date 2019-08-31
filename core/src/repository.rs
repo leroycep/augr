@@ -131,6 +131,11 @@ where
 
         let mut patches_to_load: VecDeque<PatchRef> = patches.collect();
         while let Some(patch_ref) = patches_to_load.pop_front() {
+            // Don't load patches that have already been loaded
+            if self.patches_loaded.contains(&patch_ref) {
+                continue;
+            }
+
             let patch = match self.store.get_patch(&patch_ref) {
                 Ok(p) => p,
                 Err(source) => {
@@ -182,6 +187,7 @@ where
 use crate::store::sync_folder_store::{SyncFolderStore, SyncFolderStoreError};
 
 impl Repository<SyncFolderStore> {
+    #[cfg_attr(feature = "flame_it", flame)]
     pub fn try_sync_data(&mut self) -> Result<(), Vec<Error<SyncFolderStoreError>>> {
         let metas = self
             .store
