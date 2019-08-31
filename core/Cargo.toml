@@ -1,6 +1,6 @@
 [package]
 name = "augr-core"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["LeRoyce Pearson <leroycepearson@geemili.xyz>"]
 edition = "2018"
 license = "GPL-3.0-or-later"

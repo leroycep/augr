@@ -40,9 +40,9 @@ dependencies = [
 
 [[package]]
 name = "augr-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
- "augr-core 0.2.0",
+ "augr-core 0.2.1",
  "chrono 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directories 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -58,7 +58,7 @@ dependencies = [
 
 [[package]]
 name = "augr-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "flame 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
