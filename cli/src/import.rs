@@ -16,7 +16,7 @@ arg_enum! {
 #[derive(StructOpt, Debug)]
 pub struct ImportCmd {
     /// The format that is being imported
-    #[structopt(raw(possible_values = "&Format::variants()"), case_insensitive = true)]
+    #[structopt(possible_values = &Format::variants(), case_insensitive = true)]
     format: Format,
 
     /// Path to data to import
