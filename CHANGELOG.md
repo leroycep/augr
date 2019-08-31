@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
-- The `--refs` flag will make the summary list an Event's reference in the tags
+- `summary --refs` will list an Event's reference in the tags
 - The `tag` command will add tags to previous events
 - The `set-start` command will change the time an event starts
 
