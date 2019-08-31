@@ -42,6 +42,7 @@ impl PatchedTimesheet {
         }
     }
 
+    #[cfg_attr(feature = "flame_it", flame)]
     pub fn apply_patch(&mut self, patch: &Patch) -> Result<(), Vec<Error>> {
         let mut new_state = self.clone();
         let mut errors = Vec::new();
