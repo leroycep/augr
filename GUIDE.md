@@ -8,6 +8,7 @@ is installed and that the user is familiar with the command line.
 
 * [Configuration](#configuration)
 * [Basics](#basics)
+* [Fixing Mistakes](#fixing-mistakes)
 * [Specifying Dates and Times](#specifying-dates-and-times)
 
 ### Configuration
@@ -53,6 +54,7 @@ Date  Start Duration Total     Tags
       13:15 1h 31m   8h 12m    coding augr
       14:46 8m       8h 20m    social
       14:54 53m      9h 14m    augr
+$ # Filter the output
 $ augr summary augr
 Date  Start Duration Total     Tags
 ――――― ――――― ―――――――― ――――――――  ――――――――
@@ -60,6 +62,45 @@ Date  Start Duration Total     Tags
       11:36 1h 38m   2h 33m    coding augr
       13:15 1h 31m   4h 4m     coding augr
       14:54 53m      4h 57m    augr
+```
+
+If you forget to start tracking for a couple of minutes, you can use the
+`--time` option to set the event at a past time.
+
+```sh
+$ augr start hello world --time 10min
+```
+
+See [Specifying Dates and Times](#specifying-dates-and-times) for a complete
+list of ways to specify datetimes.
+
+### Fixing Mistakes
+
+`augr` also supports modifying past events. For example say you started reading,
+but then decided that you wanted to tag this reading with `entertainment`. You
+can do this with the `tag` subcommand.
+
+```sh
+$ augr summary --refs
+Date  Start Duration Total     Tags
+――――― ――――― ―――――――― ――――――――  ――――――――
+08/31 17:04 14m      14m      reading fbb4d730-c52a-450f-b920-78b20f8209bd
+$ augr tag fbb4d730-c52a-450f-b920-78b20f8209bd entertainment
+$ augr summary
+Date  Start Duration Total     Tags
+――――― ――――― ―――――――― ――――――――  ――――――――
+08/31 17:04 17m      17m      entertainment reading
+```
+
+The `--refs` option gives you the `EventRef` of each event. You can then use
+that reference to `tag` the event, or change its start time.
+
+```sh
+$ augr set-start fbb4d730-c52a-450f-b920-78b20f8209bd 17:15
+$ augr summary
+Date  Start Duration Total     Tags
+――――― ――――― ―――――――― ――――――――  ――――――――
+08/31 17:15 10m      10m      entertainment reading
 ```
 
 ### Specifying Dates and Times
