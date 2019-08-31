@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `tag` command will add tags to previous events
 - The `set-start` command will change the time an event starts
 
+### Changed
+- Reduced cloning and redundant work to make `augr` 10x faster
+    - Results may vary ;)
+
 ## [0.2.0] - 2019-08-11
 ### Added
 - `--time` argument to `start` command
