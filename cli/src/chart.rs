@@ -1,5 +1,6 @@
-use augr_core::{Tag, Timesheet};
-use chrono::{offset::TimeZone, Local, NaiveDate, Utc};
+use crate::format_duration;
+use augr_core::{timesheet::Segment, Tag, Timesheet};
+use chrono::{offset::TimeZone, DateTime, Duration, Local, NaiveDate, Utc};
 use std::collections::BTreeSet;
 use structopt::StructOpt;
 
@@ -33,6 +34,7 @@ impl Cmd {
         };
 
         let mut cur_date = start_date;
+        let mut total_time = Duration::seconds(0);
 
         print!("Day ");
         for hour in 0..24 {
@@ -60,8 +62,50 @@ impl Cmd {
                     print!(" ");
                 }
             }
-            println!();
+            let time_for_day = total_duration_in_range(
+                timesheet,
+                cur_date.and_hms(0, 0, 0).with_timezone(&Utc),
+                cur_date.succ().and_hms(0, 0, 0).with_timezone(&Utc),
+                &tags,
+            );
+            println!(" {}", format_duration(time_for_day));
+            total_time = total_time + time_for_day;
             cur_date = cur_date + chrono::Duration::days(1);
         }
+
+        println!("\ntotal time: {}", format_duration(total_time));
+    }
+}
+
+fn total_duration_in_range(
+    timesheet: &Timesheet,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    tags: &BTreeSet<Tag>,
+) -> Duration {
+    assert!(start < end);
+    timesheet
+        .segments()
+        .into_iter()
+        .filter(|s| s.start_time >= start)
+        .filter(|s| s.start_time <= end)
+        .filter(|s| !s.tags.is_empty() && tags.is_subset(&s.tags))
+        .filter_map(|s| segment_duration_in_range(&s, start, end))
+        .fold(Duration::seconds(0), |acc, d| acc + d)
+}
+
+/// Make sure the start and end are no earlier or later the given start and end
+fn segment_duration_in_range(
+    segment: &Segment,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+) -> Option<Duration> {
+    assert!(start < end);
+    if segment.start_time > end || segment.end_time < start {
+        None
+    } else {
+        let start_time = segment.start_time.max(start);
+        let end_time = segment.end_time.min(end);
+        Some(end_time.signed_duration_since(start_time))
     }
 }
