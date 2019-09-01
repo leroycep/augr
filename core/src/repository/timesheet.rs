@@ -125,42 +125,28 @@ impl PatchedTimesheet {
         let mut errors = Vec::new();
         let patch_ref = patch.patch_ref();
 
-        for start_added in patch.add_start.iter() {
-            match self.events.get(&start_added.event) {
-                Some(_event) => {}
-                None => {
-                    errors.push(Error::UnknownEvent {
-                        patch: *patch_ref,
-                        event: start_added.event.clone(),
-                    });
-                    continue;
-                }
-            };
-        }
-        for start_removed in patch.remove_start.iter() {
-            match self.events.get(&start_removed.event) {
-                Some(_event) => {}
-                None => {
-                    errors.push(Error::UnknownEvent {
-                        patch: *patch_ref,
-                        event: start_removed.event.clone(),
-                    });
-                    continue;
-                }
+        // Pull out every event reference into an iterator
+        let add_start_events = patch.add_start.iter().map(|s| s.event.as_str());
+        let remove_start_events = patch.remove_start.iter().map(|s| s.event.as_str());
+        let add_tag_events = patch.add_tag.iter().map(|s| s.event.as_str());
+        let remove_tag_events = patch.remove_tag.iter().map(|s| s.event.as_str());
+        let events = add_start_events
+            .chain(remove_start_events)
+            .chain(add_tag_events)
+            .chain(remove_tag_events);
+
+        // Make sure that all EventReferences are valid
+        for event in events {
+            if self.events.get(event).is_none() {
+                errors.push(Error::UnknownEvent {
+                    patch: *patch_ref,
+                    event: event.to_string(),
+                });
+                continue;
             };
         }
 
-        for tag_added in patch.add_tag.iter() {
-            self.events
-                .get(&tag_added.event)
-                .expect("no event for add-tag");
-        }
-        for tag_removed in patch.remove_tag.iter() {
-            self.events
-                .get(&tag_removed.event)
-                .expect("no event for remove-tag");
-        }
-
+        // Make sure that new events don't have the same ID as some other event
         for new_event in patch.create_event.iter() {
             if self.events.get(&new_event.event).is_some() {
                 errors.push(Error::DuplicateEventId {
