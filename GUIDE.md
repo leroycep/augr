@@ -29,8 +29,16 @@ $ augr start reading
 ```
 
 Here you are telling `augr` that you have started reading. `augr` will log that
-you started "reading" at the current time. We can check that this is indeed the
-case with `augr summary`:
+you started "reading" at the current time. Once you have finished reading this
+guide, stop tracking your time as reading by passing no tags to the start
+command:
+
+```
+$ augr start
+```
+
+
+You can check how long you've been reading for with the `augr summary` command.
 
 ```sh
 $ augr summary
