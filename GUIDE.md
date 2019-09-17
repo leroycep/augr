@@ -39,6 +39,34 @@ Date  Start Duration Total     Tags
 07/20 13:00 0m       0m        reading
 ```
 
+Augr maintains a continuous stream of events. Each event ends when the next one
+begins. The canonical way to stop tracking task(s) is to start an event with no
+tags, like so:
+
+```sh
+$ augr start
+$ augr summary
+Date  Start Duration Total     Tags
+――――― ――――― ―――――――― ――――――――  ――――――――
+07/20 13:00 30m      30m       reading
+07/20 13:30 0m       30m       
+```
+
+This is no different than any other event, except that the output of `augr chart`
+will output blank spaces instead of filled in marks:
+
+```sh
+$ augr chart
+Day 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 
+Tue ████████████████  █████████████████████████████████████████  ███████████
+Wed ████████████████ █████████████████████ ███████████████     ██   ████████
+Thu ████████████████    ██ ██████████████████████                           
+Fri ████████████████     ███████████████████████████ ███████████████████████
+Sat ███████████████████████████████       ████  ████████████████████████████
+Sun ████████████████████████████         ███      ██████████████    ████████
+Mon ████████████████  ██████████████████████████████████████               
+```
+
 You can filter the output of the summary by giving some tags to the `summary`
 subcommand:
 
