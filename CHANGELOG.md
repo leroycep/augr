@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
-- The `untag` will remove tags from previous events
+- The `untag` command will remove tags from previous events
+
+### Changed
+- The `chart` command will now display the number of hours tracked beside each
+  day
 
 ## [0.2.1] - 2019-08-31
 ### Added
