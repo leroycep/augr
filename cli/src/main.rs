@@ -9,6 +9,7 @@ mod set_start;
 mod start;
 mod summary;
 mod tag;
+mod untag;
 mod tags;
 mod time_input;
 
@@ -52,6 +53,10 @@ enum Command {
     /// Add tags to an existing event
     #[structopt(no_version, name = "tag")]
     Tag(tag::Cmd),
+
+    /// Remove tags from an existing event
+    #[structopt(no_version, name = "untag")]
+    Untag(untag::Cmd),
 
     /// Change when an event started
     #[structopt(no_version, name = "set-start")]
@@ -167,6 +172,16 @@ fn run() -> Result<(), Error> {
         Command::Chart(subcmd) => subcmd.exec(&timesheet),
         Command::Tags(subcmd) => subcmd.exec(&timesheet),
         Command::Tag(subcmd) => {
+            let patches = subcmd
+                .exec(&timesheet)
+                .map_err(|e| Box::new(e).into())
+                .context(GeneralError {})?;
+            for patch in patches {
+                println!("{}", patch.patch_ref());
+                repo.add_patch(patch).unwrap();
+            }
+        }
+        Command::Untag(subcmd) => {
             let patches = subcmd
                 .exec(&timesheet)
                 .map_err(|e| Box::new(e).into())
