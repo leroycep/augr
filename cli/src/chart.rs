@@ -87,7 +87,7 @@ fn total_duration_in_range(
     timesheet
         .segments()
         .into_iter()
-        .filter(|s| s.start_time >= start)
+        .filter(|s| s.end_time >= start)
         .filter(|s| s.start_time <= end)
         .filter(|s| !s.tags.is_empty() && tags.is_subset(&s.tags))
         .filter_map(|s| segment_duration_in_range(&s, start, end))
