@@ -25,12 +25,5 @@ parse_duration = "1.0"
 augr-core = { path = "../core", version = "0.2.2-dev" }
 uuid = "0.7"
 
-flame = { version = "0.2.2", optional = true }
-flamer = { version = "0.4", optional = true }
-
-[features]
-default = []
-flame_it = ["flame", "flamer", "augr-core/flame_it"]
-
 [badges]
 travis-ci = { repository = "geemili/augr" }

@@ -42,7 +42,6 @@ impl PatchedTimesheet {
         }
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     pub fn apply_patch(&mut self, patch: &Patch) -> Result<(), Vec<Error>> {
         // Verify patch. From this point on, we should have no errors, and `expect("valid patch")` indicates that
         if let Err(errors) = self.verify_patch(patch) {
@@ -120,7 +119,6 @@ impl PatchedTimesheet {
         Ok(())
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     fn verify_patch(&self, patch: &Patch) -> Result<(), Vec<Error>> {
         let mut errors = Vec::new();
         let patch_ref = patch.patch_ref();

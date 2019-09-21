@@ -1,7 +1,3 @@
-#[cfg(feature = "flame_it")]
-#[macro_use]
-extern crate flamer;
-
 mod chart;
 mod config;
 mod import;
@@ -118,41 +114,21 @@ fn run() -> Result<(), Error> {
     let conf = config::load_config(&conf_file).context(GetConfig {})?;
 
     // Load store for own data
-    #[cfg(feature = "flame_it")]
-    flame::start("load repository");
-
     let store = SyncFolderStore::new(conf.sync_folder, conf.device_id).should_init(true);
     let mut repo = Repository::from_store(store).unwrap();
 
-    #[cfg(feature = "flame_it")]
-    flame::end("load repository");
-
     // Synchronize data
-    #[cfg(feature = "flame_it")]
-    flame::start("synchronize data");
-
     repo.try_sync_data()
         .map_err(|errors| Error::SyncError { errors })?;
     repo.save_meta().unwrap();
 
-    #[cfg(feature = "flame_it")]
-    flame::end("synchronize data");
-
     // Convert abstract patch data structure into a more conventional format
-    #[cfg(feature = "flame_it")]
-    flame::start("flatten timesheet");
-
     let eventgraph = repo.timesheet();
     let timesheet = eventgraph
         .flatten()
         .map_err(|conflicts| Error::MergeConflicts { conflicts })?;
 
-    #[cfg(feature = "flame_it")]
-    flame::end("flatten timesheet");
-
     // Run command
-    #[cfg(feature = "flame_it")]
-    flame::start("command");
     match opt.cmd.unwrap_or_default() {
         Command::Start(subcmd) => {
             let patches = subcmd.exec(&timesheet);
@@ -202,14 +178,9 @@ fn run() -> Result<(), Error> {
             }
         }
     };
-    #[cfg(feature = "flame_it")]
-    flame::end("command");
 
     // Save which patches this device uses to disk
     repo.save_meta().unwrap();
-
-    #[cfg(feature = "flame_it")]
-    flame::dump_html(&mut std::fs::File::create("flame-graph.html").unwrap()).unwrap();
 
     Ok(())
 }

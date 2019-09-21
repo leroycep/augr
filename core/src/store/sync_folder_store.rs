@@ -102,7 +102,6 @@ impl SyncFolderStore {
 impl Store for SyncFolderStore {
     type Error = SyncFolderStoreError;
 
-    #[cfg_attr(feature = "flame_it", flame)]
     fn get_meta(&self) -> Result<Meta, Self::Error> {
         let path = self.meta_file_path();
 
@@ -144,7 +143,6 @@ impl Store for SyncFolderStore {
         Ok(())
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     fn get_patch(&self, patch_ref: &PatchRef) -> Result<Patch, Self::Error> {
         let path = self
             .patch_folder
@@ -187,7 +185,6 @@ impl Store for SyncFolderStore {
     }
 }
 
-#[cfg_attr(feature = "flame_it", flame)]
 fn load_file_contents(path: &std::path::Path) -> Result<String, std::io::Error> {
     read_to_string(&path)
 }

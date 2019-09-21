@@ -54,7 +54,6 @@ where
     S: Store,
     <S as Store>::Error: 'static,
 {
-    #[cfg_attr(feature = "flame_it", flame)]
     pub fn from_store(store: S) -> Result<Self, Vec<Error<S::Error>>> {
         let mut repo = Self {
             store,
@@ -65,7 +64,6 @@ where
         Ok(repo)
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     pub fn save_meta(&mut self) -> Result<(), Error<S::Error>> {
         let mut meta = Meta::new();
         for p in self.patches_loaded.iter() {
@@ -82,7 +80,6 @@ where
         Ok(())
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     pub fn load_patch(&mut self, patch: Patch) -> Result<(), Error<S::Error>> {
         // Don't apply patches twice
         if self.patches_loaded.contains(patch.patch_ref()) {
@@ -120,7 +117,6 @@ where
         &self.timesheet
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     fn load_patches(
         &mut self,
         patches: impl Iterator<Item = PatchRef>,
@@ -172,7 +168,6 @@ where
         }
     }
 
-    #[cfg_attr(feature = "flame_it", flame)]
     fn load_all_patches(&mut self) -> Result<(), Vec<Error<S::Error>>> {
         let meta = self
             .store
@@ -187,7 +182,6 @@ where
 use crate::store::sync_folder_store::{SyncFolderStore, SyncFolderStoreError};
 
 impl Repository<SyncFolderStore> {
-    #[cfg_attr(feature = "flame_it", flame)]
     pub fn try_sync_data(&mut self) -> Result<(), Vec<Error<SyncFolderStoreError>>> {
         let metas = self
             .store

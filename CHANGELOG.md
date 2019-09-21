@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `chart` command will now display the number of hours tracked beside each
   day
 
+### Removed
+- The `flame_it` feature has been removed, use a program like `flamegraph`
+  instead
+
 ## [0.2.1] - 2019-08-31
 ### Added
 - `summary --refs` will list an Event's reference in the tags

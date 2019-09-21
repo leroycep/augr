@@ -1,7 +1,3 @@
-#[cfg(feature = "flame_it")]
-#[macro_use]
-extern crate flamer;
-
 pub mod repository;
 pub mod store;
 pub mod timesheet;
