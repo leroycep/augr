@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - The `chart` command will now display the number of hours tracked beside each
   day
+- The meta file will be checked for locks before it is accessed
 
 ### Removed
 - The `flame_it` feature has been removed, use a program like `flamegraph`

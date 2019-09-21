@@ -1,8 +1,9 @@
 use crate::{Meta, Patch, PatchRef, Store};
+use fs2::FileExt;
 use snafu::{ResultExt, Snafu};
 use std::{
-    fs::{create_dir_all, read_to_string, OpenOptions},
-    io::Write,
+    fs::{create_dir_all, read_to_string, File, OpenOptions},
+    io::{Read, Seek, SeekFrom, Write},
     path::PathBuf,
 };
 use toml;
@@ -14,6 +15,7 @@ pub struct SyncFolderStore {
     root_folder: PathBuf,
     patch_folder: PathBuf,
     device_id: String,
+    meta_file: Option<File>,
 }
 
 #[derive(Debug, Snafu)]
@@ -48,6 +50,12 @@ pub enum SyncFolderStoreError {
         path: PathBuf,
     },
 
+    #[snafu(display("File {} is locked: {}", path.display(), source))]
+    FileLocked {
+        source: std::io::Error,
+        path: PathBuf,
+    },
+
     #[snafu(display("IO error: {}", source))]
     IOError { source: std::io::Error },
 }
@@ -59,6 +67,7 @@ impl SyncFolderStore {
             device_id,
             patch_folder: root_folder.join("patches"),
             root_folder,
+            meta_file: None,
         }
     }
 
@@ -106,7 +115,11 @@ impl Store for SyncFolderStore {
         let path = self.meta_file_path();
 
         if path.exists() || !self.init {
-            let contents = read_to_string(&path).context(ReadFile { path })?;
+            let mut file = File::open(&path).context(ReadFile { path: path.clone() })?;
+            let _ = file.try_lock_shared().context(FileLocked { path: path.clone() })?;
+
+            let mut contents = String::new();
+            let _ = file.read_to_string(&mut contents).context(ReadFile { path })?;
 
             let meta = toml::de::from_str(&contents).context(DeserializeMeta {
                 device_id: self.device_id.clone(),
@@ -131,11 +144,26 @@ impl Store for SyncFolderStore {
             }
         }
 
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path.clone())
+        let file: &mut File = if let Some(f) = &mut self.meta_file {
+            f
+        } else {
+            let file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(path.clone())
+                .context(WriteFile { path: path.clone() })?;
+            if let Err(e) = file.try_lock_exclusive() {
+                return Err(e).context(FileLocked { path: path.clone() });
+            } else {
+                self.meta_file = Some(file);
+                self.meta_file.as_mut().unwrap()
+            }
+        };
+
+        // Truncate the file
+        file.seek(SeekFrom::Start(0))
             .context(WriteFile { path: path.clone() })?;
+        file.set_len(0).context(WriteFile { path: path.clone() })?;
 
         file.write_all(contents.as_slice())
             .context(WriteFile { path: path.clone() })?;
