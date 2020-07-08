@@ -7,7 +7,6 @@ This project is heavily inspired by [timewarrior][].
 
 ## Useful Links
 
-- [Official Matrix Chatroom](https://matrix.to/#/!RMSJfJyCNLxdOzbmQG:geemili.xyz?via=geemili.xyz&via=matrix.org)
 - [User Guide](GUIDE.md)
 
 ## Setup
