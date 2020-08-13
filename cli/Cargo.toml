@@ -24,6 +24,7 @@ snafu = "0.5"
 parse_duration = "1.0"
 augr-core = { path = "../core", version = "0.2.1" }
 uuid = "0.7"
+toml_edit = "0.2"
 
 flame = { version = "0.2.2", optional = true }
 flamer = { version = "0.4", optional = true }
