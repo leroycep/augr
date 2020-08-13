@@ -28,7 +28,7 @@ enum Command {
     #[structopt(no_version, name = "start")]
     Start(start::StartCmd),
 
-    /// Show a table tracked time; defaults to only showing time tracked today
+    /// Shows a table of tracked time; defaults to only showing time tracked today
     #[structopt(no_version, name = "summary")]
     Summary(summary::SummaryCmd),
     // /// Show an ascii art chart of tracked time

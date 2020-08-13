@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::{format_duration, time_input::parse_default_local};
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Datelike, Duration, Local, NaiveDateTime, Utc};
+use clap::arg_enum;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use structopt::StructOpt;
@@ -27,6 +28,33 @@ pub struct SummaryCmd {
     /// The datetime at which to stop showing events
     #[structopt(long = "end", parse(try_from_os_str = parse_default_local))]
     end: Option<DateTime<Local>>,
+
+    /// How to treat the events on the edge of the start and end times
+    ///
+    /// "include": Keep the events that started before (but ended after) the start time.
+    /// Same for the events that end after (but started before) the end time.
+    ///
+    /// "exclude": Only include events that are fully within the start and end times
+    ///
+    /// "clip": Keep the events at the start and end, but clip their durations to fit
+    ///  within the start and end times.
+    #[structopt(long = "edges", case_insensitive = true, default_value = "include")]
+    edge_behavior: EdgeBehavior,
+}
+
+arg_enum! {
+    #[derive(Debug)]
+    pub enum EdgeBehavior {
+        Include,
+        Exclude,
+        Clip,
+    }
+}
+
+impl Default for EdgeBehavior {
+    fn default() -> Self {
+        EdgeBehavior::Include
+    }
 }
 
 impl SummaryCmd {
@@ -50,13 +78,7 @@ impl SummaryCmd {
                     Some(num) => num >= start.month() as i32,
                     None => false,
                 },
-                3 => {
-                    e.file_type().is_file()
-                        && match e.file_name().to_str() {
-                            Some(file_name_with_ext) => file_name_with_ext.ends_with(".toml"),
-                            None => false,
-                        }
-                }
+                3 => e.file_type().is_file(),
                 _ => false,
             });
 
@@ -97,12 +119,33 @@ impl SummaryCmd {
             segments.insert(local_time, tags);
         }
 
-        let mut segments_iter = segments.range(start..).peekable();
+        let first_time = segments
+            .range(..start)
+            .last()
+            .map(|(time, _)| *time)
+            .unwrap_or(start);
+        let mut segments_iter = segments.range(first_time..).peekable();
         let mut total_duration = Duration::seconds(0);
 
         loop {
             let (&time, ref tags) = match segments_iter.next() {
-                Some(a) => a,
+                Some(a) => match self.edge_behavior {
+                    EdgeBehavior::Clip => {
+                        if *a.0 < start {
+                            (&start, a.1)
+                        } else {
+                            a
+                        }
+                    }
+                    EdgeBehavior::Include => a,
+                    EdgeBehavior::Exclude => {
+                        if *a.0 < start {
+                            continue;
+                        } else {
+                            a
+                        }
+                    }
+                },
                 None => break,
             };
 
@@ -114,15 +157,27 @@ impl SummaryCmd {
                 break;
             }
 
-            let next_time = match segments_iter.peek() {
-                Some(a) => {
-                    if *a.0 > end {
+            let next_time_or_now = segments_iter
+                .peek()
+                .map(|(time, _)| *time)
+                .cloned()
+                .unwrap_or_else(Local::now);
+            let next_time = match self.edge_behavior {
+                EdgeBehavior::Clip => {
+                    if next_time_or_now > end {
                         end
                     } else {
-                        *a.0
+                        next_time_or_now
                     }
                 }
-                None => Local::now(),
+                EdgeBehavior::Include => next_time_or_now,
+                EdgeBehavior::Exclude => {
+                    if next_time_or_now > end {
+                        break;
+                    } else {
+                        next_time_or_now
+                    }
+                }
             };
 
             let duration = next_time.signed_duration_since(time);
