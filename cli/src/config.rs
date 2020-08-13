@@ -1,33 +1,28 @@
-use serde::Deserialize;
-use snafu::{ResultExt, Snafu};
+use anyhow::{Context, Result};
 use std::{
     fs::read_to_string,
-    io,
     path::{Path, PathBuf},
 };
+use toml_edit::Document;
 
-#[derive(Deserialize)]
-pub struct Conf {
+pub struct Config {
     pub sync_folder: PathBuf,
     pub device_id: String,
 }
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Unable to read configuration from {}: {}", path.display(), source))]
-    ReadConfiguration { source: io::Error, path: PathBuf },
+pub fn load_config(path: &Path) -> Result<Config> {
+    let conf_str = read_to_string(path)
+        .with_context(|| format!("Failed to read configuration at {}", path.display()))?;
 
-    #[snafu(display("Invalid configuration file at {}: {}", path.display(), source))]
-    InvalidConfiguration {
-        source: toml::de::Error,
-        path: PathBuf,
-    },
-}
+    let conf_doc = conf_str
+        .parse::<Document>()
+        .context("Invalid configuration file")?;
 
-pub fn load_config(path: &Path) -> Result<Conf, Error> {
-    let conf_str = read_to_string(path).context(ReadConfiguration { path })?;
+    let sync_folder = conf_doc["sync_folder"].as_str().unwrap().into();
+    let device_id = conf_doc["device_id"].as_str().unwrap().into();
 
-    let conf = toml::de::from_str(&conf_str).context(InvalidConfiguration { path })?;
-
-    Ok(conf)
+    Ok(Config {
+        sync_folder,
+        device_id,
+    })
 }

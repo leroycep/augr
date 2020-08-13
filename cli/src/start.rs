@@ -1,8 +1,8 @@
-use augr_core::{Patch, Timesheet};
+use crate::config::Config;
+use anyhow::{anyhow, Context};
 use chrono::{DateTime, Local, Utc};
 use structopt::StructOpt;
-use std::path::PathBuf;
-use toml_edit::{Document, value, Array};
+use toml_edit::{value, Array, Document};
 
 #[derive(StructOpt, Debug)]
 pub struct StartCmd {
@@ -15,7 +15,7 @@ pub struct StartCmd {
 }
 
 impl StartCmd {
-    pub fn exec(&self, _timesheet: &Timesheet) -> Vec<Patch> {
+    pub fn exec(&self, config: &Config) -> anyhow::Result<()> {
         let now = Local::now();
         let start_time = self
             .time
@@ -27,20 +27,19 @@ impl StartCmd {
         let month_repr = start_time.format("%m");
         let filename_repr = start_time.format("%Y%m%d-%H%M%S");
 
-        let mut filepath = PathBuf::new();
-        filepath.push("target");
-        filepath.push("testing_folder");
+        let mut filepath = config.sync_folder.clone();
         filepath.push(format!("{}", year_repr));
         filepath.push(format!("{}", month_repr));
 
-        std::fs::create_dir_all(&filepath).unwrap();
+        std::fs::create_dir_all(&filepath).with_context(|| {
+            format!("Failed to create records directory {}", filepath.display())
+        })?;
 
         filepath.push(format!("{}", filename_repr));
         filepath.set_extension("toml");
 
         if filepath.exists() {
-            eprintln!("A record already exists at {}", start_time);
-            std::process::exit(1);
+            return Err(anyhow!("A record already exists for {} ({})", start_time.with_timezone(&Local), start_time));
         }
 
         let mut doc = Document::new();
@@ -55,8 +54,9 @@ impl StartCmd {
 
         let contents = doc.to_string();
 
-        std::fs::write(filepath, &contents).unwrap();
+        std::fs::write(&filepath, &contents)
+            .with_context(|| format!("Failed to write record to {}", filepath.display()))?;
 
-        vec![]
+        Ok(())
     }
 }

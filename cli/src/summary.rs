@@ -1,5 +1,6 @@
+use crate::config::Config;
 use crate::{format_duration, time_input::parse_default_local};
-use augr_core::{Tag, Timesheet};
+use anyhow::{Context, Result};
 use chrono::{DateTime, Local};
 use std::collections::BTreeSet;
 use structopt::StructOpt;
@@ -28,10 +29,11 @@ pub struct SummaryCmd {
 
 impl SummaryCmd {
     #[cfg_attr(feature = "flame_it", flame)]
-    pub fn exec(&self, timesheet: &Timesheet) {
-        let tags: BTreeSet<Tag> = self.tags.iter().cloned().collect();
+    pub fn exec(&self, config: &Config) -> Result<()> {
+        let tags: BTreeSet<String> = self.tags.iter().cloned().collect();
 
-        let start = self.start.unwrap_or_else(default_start);
+        return Ok(());
+        /*let start = self.start.unwrap_or_else(default_start);
         let end = self.end.unwrap_or_else(default_end);
         let segments = timesheet
             .segments()
@@ -97,7 +99,7 @@ impl SummaryCmd {
                     date_str, start_time, end_time, duration_str, total_duration_str, tags_str
                 );
             }
-        }
+        }*/
     }
 }
 
