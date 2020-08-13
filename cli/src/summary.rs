@@ -1,9 +1,11 @@
 use crate::config::Config;
 use crate::{format_duration, time_input::parse_default_local};
-use anyhow::{Context, Result};
-use chrono::{DateTime, Local};
-use std::collections::BTreeSet;
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDateTime, Utc};
+use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsStr;
 use structopt::StructOpt;
+use toml_edit::Document;
 
 #[derive(StructOpt, Default, Debug)]
 pub struct SummaryCmd {
@@ -30,77 +32,121 @@ pub struct SummaryCmd {
 impl SummaryCmd {
     #[cfg_attr(feature = "flame_it", flame)]
     pub fn exec(&self, config: &Config) -> Result<()> {
-        let tags: BTreeSet<String> = self.tags.iter().cloned().collect();
+        let filter_tags: BTreeSet<String> = self.tags.iter().cloned().collect();
 
-        return Ok(());
-        /*let start = self.start.unwrap_or_else(default_start);
+        let start = self.start.unwrap_or_else(default_start);
         let end = self.end.unwrap_or_else(default_end);
-        let segments = timesheet
-            .segments()
+        let mut segments: BTreeMap<DateTime<Local>, BTreeSet<String>> = BTreeMap::new();
+
+        let walker = walkdir::WalkDir::new(&config.sync_folder)
             .into_iter()
-            .filter(|s| s.start_time.with_timezone(&Local) >= start)
-            .filter(|s| s.start_time.with_timezone(&Local) <= end)
-            .filter(|s| s.tags.is_superset(&tags));
+            .filter_entry(|e| match e.depth() {
+                0 => true,
+                1 => match osstr_to_number(e.file_name()) {
+                    Some(num) => num >= start.year(),
+                    None => false,
+                },
+                2 => match osstr_to_number(e.file_name()) {
+                    Some(num) => num >= start.month() as i32,
+                    None => false,
+                },
+                3 => {
+                    e.file_type().is_file()
+                        && match e.file_name().to_str() {
+                            Some(file_name_with_ext) => file_name_with_ext.ends_with(".toml"),
+                            None => false,
+                        }
+                }
+                _ => false,
+            });
 
-        let mut total_duration = chrono::Duration::seconds(0);
-        let mut current_date = None;
+        for entry in walker {
+            let entry = entry.context("Failed to read entry")?;
+            if entry.depth() != 3 {
+                continue;
+            }
+            let time_str = match entry.file_name().to_str() {
+                Some(file_name) => file_name,
+                None => continue,
+            };
+            let naive_time = NaiveDateTime::parse_from_str(time_str, "%Y%m%d-%H%M%S.toml")
+                .with_context(|| {
+                    format!("Failed to parse datetime from file path {:?}", entry.path())
+                })?;
 
-        if !self.show_ends {
-            println!("Date  Start Duration Total     Tags");
+            let utc_time = DateTime::<Utc>::from_utc(naive_time, Utc);
+            let local_time = utc_time.with_timezone(&Local);
+
+            let record_contents = std::fs::read_to_string(entry.path())
+                .with_context(|| format!("Failed to read record {:?}", entry.path()))?;
+
+            let record_doc = record_contents
+                .parse::<Document>()
+                .with_context(|| format!("Invalid toml file {:?}", entry.path()))?;
+
+            let tags_in_doc = match record_doc["tags"].as_array() {
+                Some(array) => array,
+                None => return Err(anyhow!("Expected tags to be an array")),
+            };
+            let mut tags = BTreeSet::new();
+
+            for tag_in_doc in tags_in_doc.iter() {
+                tags.insert(tag_in_doc.as_str().unwrap().into());
+            }
+
+            segments.insert(local_time, tags);
+        }
+
+        let mut segments_iter = segments.range(start..).peekable();
+        let mut total_duration = Duration::seconds(0);
+
+        loop {
+            let (&time, ref tags) = match segments_iter.next() {
+                Some(a) => a,
+                None => break,
+            };
+
+            if !tags.is_superset(&filter_tags) {
+                continue;
+            }
+
+            if time > end {
+                break;
+            }
+
+            let next_time = match segments_iter.peek() {
+                Some(a) => {
+                    if *a.0 > end {
+                        end
+                    } else {
+                        *a.0
+                    }
+                }
+                None => Local::now(),
+            };
+
+            let duration = next_time.signed_duration_since(time);
+            total_duration = total_duration + duration;
+
             println!(
-                "――――― ――――― ―――――――― ――――――――  ――――――――"
-            );
-        } else {
-            println!("Date  Start End   Duration Total     Tags");
-            println!(
-                "――――― ――――― ――――― ―――――――― ――――――――  ――――――――"
+                "{}\t{}\t{}\t{:?}",
+                time.to_rfc3339(),
+                format_duration(duration),
+                format_duration(total_duration),
+                tags
             );
         }
-        for segment in segments {
-            let seg_datetime = segment.start_time.with_timezone(&chrono::Local);
-            let seg_end_datetime = segment.end_time.with_timezone(&chrono::Local);
-            let seg_date = seg_datetime.date();
-            let date_str = if current_date != Some(seg_date) {
-                current_date = Some(seg_date);
-                seg_date.format("%m/%d").to_string()
-            } else {
-                String::from("     ")
-            };
-            let start_time = seg_datetime.format("%H:%M");
-            let end_time = seg_end_datetime.format("%H:%M");
 
-            let reference = if self.show_refs {
-                Some(segment.event_ref.as_str())
-            } else {
-                None
-            };
-
-            let tags_str = segment
-                .tags
-                .iter()
-                .map(|s| &**s)
-                .chain(reference)
-                .collect::<Vec<&str>>()
-                .join(" ");
-
-            total_duration = total_duration + segment.duration;
-
-            let duration_str = format_duration(segment.duration);
-            let total_duration_str = format_duration(total_duration);
-
-            if !self.show_ends {
-                println!(
-                    "{} {} {: <8} {: <8} {}",
-                    date_str, start_time, duration_str, total_duration_str, tags_str
-                );
-            } else {
-                println!(
-                    "{} {} {} {: <8} {: <8} {}",
-                    date_str, start_time, end_time, duration_str, total_duration_str, tags_str
-                );
-            }
-        }*/
+        Ok(())
     }
+}
+
+fn osstr_to_number(ostr: &OsStr) -> Option<i32> {
+    let str = match ostr.to_str() {
+        Some(s) => s,
+        None => return None,
+    };
+    str.parse::<i32>().ok()
 }
 
 fn default_start() -> DateTime<Local> {

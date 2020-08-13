@@ -8,7 +8,6 @@ mod time_input;
 mod start;
 mod summary;
 
-use anyhow::{Context, Result};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
