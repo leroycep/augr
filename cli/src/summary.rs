@@ -60,6 +60,10 @@ impl Default for EdgeBehavior {
 impl SummaryCmd {
     #[cfg_attr(feature = "flame_it", flame)]
     pub fn exec(&self, config: &Config) -> Result<()> {
+        if !config.sync_folder.exists() {
+            return Err(anyhow!("Sync folder does not exist"));
+        }
+
         let filter_tags: BTreeSet<String> = self.tags.iter().cloned().collect();
 
         let start = self.start.unwrap_or_else(default_start);

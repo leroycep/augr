@@ -16,6 +16,10 @@ pub struct StartCmd {
 
 impl StartCmd {
     pub fn exec(&self, config: &Config) -> anyhow::Result<()> {
+        if !config.sync_folder.exists() {
+            eprintln!("Sync folder does not exist; creating folder at {:?}", config.sync_folder);
+        }
+
         let now = Local::now();
         let start_time = self
             .time
