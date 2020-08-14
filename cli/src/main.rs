@@ -59,11 +59,21 @@ fn main() -> anyhow::Result<()> {
     let conf_file = match opt.config {
         Some(config_path) => config_path,
         None => {
-            let proj_dirs = directories::ProjectDirs::from("xyz", "geemili", "augr").unwrap();
+            let proj_dirs = config::project_directories();
             proj_dirs.config_dir().join("config.toml")
         }
     };
-    let config = config::load_config(&conf_file)?;
+
+    let config = match config::load_config(&conf_file) {
+        Ok(config) => config,
+        Err(e) => match e.root_cause().downcast_ref::<std::io::Error>() {
+            Some(io_err) if io_err.kind() == std::io::ErrorKind::NotFound => {
+                config::Config::default()
+            }
+            _ => return Err(e),
+        },
+    };
+
 
     // Run command
     match opt.cmd.unwrap_or_default() {
