@@ -13,10 +13,18 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            sync_folder: project_directories().data_dir().to_path_buf(),
-            device_id: hostname::get().unwrap().to_string_lossy().to_string(),
+            sync_folder: default_sync_folder(),
+            device_id: default_device_id(),
         }
     }
+}
+
+pub fn default_sync_folder() -> PathBuf {
+    project_directories().data_dir().to_path_buf()
+}
+
+pub fn default_device_id() -> String {
+    hostname::get().unwrap().to_string_lossy().to_string()
 }
 
 pub fn project_directories() -> directories::ProjectDirs {
@@ -31,8 +39,14 @@ pub fn load_config(path: &Path) -> Result<Config> {
         .parse::<Document>()
         .context("Invalid configuration file")?;
 
-    let sync_folder = conf_doc["sync_folder"].as_str().unwrap().into();
-    let device_id = conf_doc["device_id"].as_str().unwrap().into();
+    let sync_folder = conf_doc["sync_folder"]
+        .as_str()
+        .map(|p| p.into())
+        .unwrap_or_else(default_sync_folder);
+    let device_id = conf_doc["device_id"]
+        .as_str()
+        .map(|d| d.into())
+        .unwrap_or_else(default_device_id);
 
     Ok(Config {
         sync_folder,
