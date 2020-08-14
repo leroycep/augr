@@ -56,6 +56,7 @@ fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
     // Load config
+    let user_passed_in_config_flag = opt.config.is_some();
     let conf_file = match opt.config {
         Some(config_path) => config_path,
         None => {
@@ -66,6 +67,7 @@ fn main() -> anyhow::Result<()> {
 
     let config = match config::load_config(&conf_file) {
         Ok(config) => config,
+        Err(e) if user_passed_in_config_flag => return Err(e),
         Err(e) => match e.root_cause().downcast_ref::<std::io::Error>() {
             Some(io_err) if io_err.kind() == std::io::ErrorKind::NotFound => {
                 config::Config::default()

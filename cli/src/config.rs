@@ -25,7 +25,7 @@ pub fn project_directories() -> directories::ProjectDirs {
 
 pub fn load_config(path: &Path) -> Result<Config> {
     let conf_str = read_to_string(path)
-        .with_context(|| format!("Failed to read configuration at {}", path.display()))?;
+        .with_context(|| format!("Failed to read configuration at {:?}", path))?;
 
     let conf_doc = conf_str
         .parse::<Document>()
