@@ -18,6 +18,14 @@ struct Opt {
     #[structopt(long = "config")]
     config: Option<PathBuf>,
 
+    /// Print out where the config file was looked for
+    #[structopt(long = "print-config-path")]
+    print_config_path: bool,
+
+    /// Print out what config options were used
+    #[structopt(long = "print-config")]
+    print_config: bool,
+
     #[structopt(subcommand)]
     cmd: Option<Command>,
 }
@@ -65,6 +73,9 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
+    if opt.print_config_path {
+        println!("Config path: {:?}\n", conf_file);
+    }
     let config = match config::load_config(&conf_file) {
         Ok(config) => config,
         Err(e) if user_passed_in_config_flag => return Err(e),
@@ -76,6 +87,16 @@ fn main() -> anyhow::Result<()> {
         },
     };
 
+    if opt.print_config {
+        println!(
+            "sync_folder = {:?}\ndevice_id = {:?}",
+            config.sync_folder, config.device_id
+        );
+    }
+
+    if opt.print_config_path || opt.print_config {
+        return Ok(());
+    }
 
     // Run command
     match opt.cmd.unwrap_or_default() {
