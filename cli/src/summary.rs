@@ -64,65 +64,12 @@ impl SummaryCmd {
             return Err(anyhow!("Sync folder does not exist"));
         }
 
+        let segments = get_segments(config, &Local)?;
+
         let filter_tags: BTreeSet<String> = self.tags.iter().cloned().collect();
 
         let start = self.start.unwrap_or_else(default_start);
         let end = self.end.unwrap_or_else(default_end);
-        let mut segments: BTreeMap<DateTime<Local>, BTreeSet<String>> = BTreeMap::new();
-
-        let walker = walkdir::WalkDir::new(&config.sync_folder)
-            .into_iter()
-            .filter_entry(|e| match e.depth() {
-                0 => true,
-                1 => match osstr_to_number(e.file_name()) {
-                    Some(num) => num >= start.year(),
-                    None => false,
-                },
-                2 => match osstr_to_number(e.file_name()) {
-                    Some(num) => num >= start.month() as i32,
-                    None => false,
-                },
-                3 => e.file_type().is_file(),
-                _ => false,
-            });
-
-        for entry in walker {
-            let entry = entry.context("Failed to read entry")?;
-            if entry.depth() != 3 {
-                continue;
-            }
-            let time_str = match entry.file_name().to_str() {
-                Some(file_name) => file_name,
-                None => continue,
-            };
-            let naive_time = NaiveDateTime::parse_from_str(time_str, "%Y%m%d-%H%M%S.toml")
-                .with_context(|| {
-                    format!("Failed to parse datetime from file path {:?}", entry.path())
-                })?;
-
-            let utc_time = DateTime::<Utc>::from_utc(naive_time, Utc);
-            let local_time = utc_time.with_timezone(&Local);
-
-            let record_contents = std::fs::read_to_string(entry.path())
-                .with_context(|| format!("Failed to read record {:?}", entry.path()))?;
-
-            let record_doc = record_contents
-                .parse::<Document>()
-                .with_context(|| format!("Invalid toml file {:?}", entry.path()))?;
-
-            let tags_in_doc = match record_doc["tags"].as_array() {
-                Some(array) => array,
-                None => return Err(anyhow!("Expected tags to be an array")),
-            };
-            let mut tags = BTreeSet::new();
-
-            for tag_in_doc in tags_in_doc.iter() {
-                tags.insert(tag_in_doc.as_str().unwrap().into());
-            }
-
-            segments.insert(local_time, tags);
-        }
-
         let first_time = segments
             .range(..start)
             .last()
@@ -214,4 +161,62 @@ fn default_start() -> DateTime<Local> {
 
 fn default_end() -> DateTime<Local> {
     Local::now()
+}
+
+pub fn get_segments<TZ: chrono::offset::TimeZone>(
+    config: &Config,
+    tz: &TZ,
+) -> Result<BTreeMap<DateTime<TZ>, BTreeSet<String>>> {
+    let mut segments: BTreeMap<DateTime<TZ>, BTreeSet<String>> = BTreeMap::new();
+
+    let walker = walkdir::WalkDir::new(&config.sync_folder)
+        .into_iter()
+        .filter_entry(|e| match e.depth() {
+            0 => true,
+            1 => osstr_to_number(e.file_name()).is_some(),
+            2 => osstr_to_number(e.file_name()).is_some(),
+            3 => e.file_type().is_file(),
+            _ => false,
+        });
+
+    for entry in walker {
+        let entry = entry.context("Failed to read entry")?;
+        if entry.depth() != 3 {
+            continue;
+        }
+
+        let time = {
+            let time_str = match entry.file_name().to_str() {
+                Some(file_name) => file_name,
+                None => continue,
+            };
+            let naive_time = NaiveDateTime::parse_from_str(time_str, "%Y%m%d-%H%M%S.toml")
+                .with_context(|| {
+                    format!("Failed to parse datetime from file path {:?}", entry.path())
+                })?;
+
+            DateTime::<Utc>::from_utc(naive_time, Utc).with_timezone(tz)
+        };
+
+        let record_contents = std::fs::read_to_string(entry.path())
+            .with_context(|| format!("Failed to read record {:?}", entry.path()))?;
+
+        let record_doc = record_contents
+            .parse::<Document>()
+            .with_context(|| format!("Invalid toml file {:?}", entry.path()))?;
+
+        let tags_in_doc = match record_doc["tags"].as_array() {
+            Some(array) => array,
+            None => return Err(anyhow!("Expected tags to be an array")),
+        };
+        let mut tags = BTreeSet::new();
+
+        for tag_in_doc in tags_in_doc.iter() {
+            tags.insert(tag_in_doc.as_str().unwrap().into());
+        }
+
+        segments.insert(time, tags);
+    }
+
+    Ok(segments)
 }
