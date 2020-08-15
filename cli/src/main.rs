@@ -7,6 +7,7 @@ mod time_input;
 
 mod start;
 mod summary;
+mod chart;
 
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -39,9 +40,10 @@ enum Command {
     /// Shows a table of tracked time; defaults to only showing time tracked today
     #[structopt(no_version, name = "summary")]
     Summary(summary::SummaryCmd),
-    // /// Show an ascii art chart of tracked time
-    // #[structopt(no_version, name = "chart")]
-    // Chart(chart::Cmd),
+
+    /// Show an ascii art chart of tracked time
+    #[structopt(no_version, name = "chart")]
+    Chart(chart::Cmd),
 
     // /// Get a list of all the different tags that have been used.
     // #[structopt(no_version, name = "tags")]
@@ -102,6 +104,7 @@ fn main() -> anyhow::Result<()> {
     match opt.cmd.unwrap_or_default() {
         Command::Start(subcmd) => subcmd.exec(&config)?,
         Command::Summary(subcmd) => subcmd.exec(&config)?,
+        Command::Chart(subcmd) => subcmd.exec(&config)?,
     };
 
     Ok(())

@@ -1,5 +1,6 @@
-use augr_core::{Tag, Timesheet};
-use chrono::{offset::TimeZone, Local, NaiveDate, Utc};
+use crate::{config::Config, summary::get_segments};
+use anyhow::Result;
+use chrono::{offset::TimeZone, Local, NaiveDate};
 use std::collections::BTreeSet;
 use structopt::StructOpt;
 
@@ -19,8 +20,10 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub fn exec(&self, timesheet: &Timesheet) {
-        let tags: BTreeSet<Tag> = self.tags.iter().cloned().map(Tag::from).collect();
+    pub fn exec(&self, config: &Config) -> Result<()> {
+        let tags: BTreeSet<String> = self.tags.iter().cloned().collect();
+
+        let segments = get_segments(config, &Local)?;
 
         let now = chrono::Local::now();
         let end_date = match self.end {
@@ -46,10 +49,11 @@ impl Cmd {
                 let hour = section / 3;
                 let minutes = (section % 3) * 20;
                 let cur_datetime = cur_date.and_hms(hour, minutes, 0);
-                let cur_tags = timesheet.tags_at_time(&cur_datetime.with_timezone(&Utc));
-                let matches = cur_tags
-                    .map(|x| tags.is_subset(&x) && !x.is_empty())
-                    .unwrap_or(false);
+
+                let matches = match segments.range(..cur_datetime).last() {
+                    Some((_start_time, cur_tags)) => tags.is_subset(cur_tags) && !cur_tags.is_empty(),
+                    None => false,
+                };
 
                 // Avoid highlighting the entire day
                 let in_past = cur_datetime <= now;
@@ -63,5 +67,7 @@ impl Cmd {
             println!();
             cur_date = cur_date + chrono::Duration::days(1);
         }
+
+        Ok(())
     }
 }
