@@ -100,8 +100,11 @@ impl SummaryCmd {
                 None => break,
             };
 
-            if !tags.is_superset(&filter_tags) {
-                continue;
+            // Check that tags has all the filter tags that were specified
+            for filter_tag in &filter_tags {
+                if !tags.contains(filter_tag) {
+                    continue;
+                }
             }
 
             if time > end {
@@ -163,11 +166,17 @@ fn default_end() -> DateTime<Local> {
     Local::now()
 }
 
+//struct Tags {
+//    // A list of all the tags used
+//    tags: Vec<String>,
+//    segments: BTreeMap<DateTime<TZ>, BTreeSet<usize>>
+//}
+
 pub fn get_segments<TZ: chrono::offset::TimeZone>(
     config: &Config,
     tz: &TZ,
-) -> Result<BTreeMap<DateTime<TZ>, BTreeSet<String>>> {
-    let mut segments: BTreeMap<DateTime<TZ>, BTreeSet<String>> = BTreeMap::new();
+) -> Result<BTreeMap<DateTime<TZ>, Vec<String>>> {
+    let mut segments: BTreeMap<DateTime<TZ>, Vec<String>> = BTreeMap::new();
 
     let walker = walkdir::WalkDir::new(&config.sync_folder)
         .into_iter()
@@ -209,10 +218,10 @@ pub fn get_segments<TZ: chrono::offset::TimeZone>(
             Some(array) => array,
             None => return Err(anyhow!("Expected tags to be an array")),
         };
-        let mut tags = BTreeSet::new();
+        let mut tags = Vec::new();
 
         for tag_in_doc in tags_in_doc.iter() {
-            tags.insert(tag_in_doc.as_str().unwrap().into());
+            tags.push(tag_in_doc.as_str().unwrap().into());
         }
 
         segments.insert(time, tags);

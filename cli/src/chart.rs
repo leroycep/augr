@@ -7,7 +7,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "chart")]
 pub struct Cmd {
-    /// A list of tags to filter against
+    /// A list of filter_tags to filter against
     tags: Vec<String>,
 
     /// The date to start charting from. Defaults to 7 days ago.
@@ -21,7 +21,7 @@ pub struct Cmd {
 
 impl Cmd {
     pub fn exec(&self, config: &Config) -> Result<()> {
-        let tags: BTreeSet<String> = self.tags.iter().cloned().collect();
+        let filter_tags: BTreeSet<String> = self.tags.iter().cloned().collect();
 
         let segments = get_segments(config, &Local)?;
 
@@ -51,7 +51,20 @@ impl Cmd {
                 let cur_datetime = cur_date.and_hms(hour, minutes, 0);
 
                 let matches = match segments.range(..cur_datetime).last() {
-                    Some((_start_time, cur_tags)) => tags.is_subset(cur_tags) && !cur_tags.is_empty(),
+                    Some((_start_time, cur_tags)) => {
+                        if !cur_tags.is_empty() {
+                            let mut contains_all_tags = true;
+                            for cur_tag in cur_tags {
+                                if !filter_tags.contains(cur_tag) {
+                                    contains_all_tags = false;
+                                    break;
+                                }
+                            }
+                            contains_all_tags
+                        } else {
+                            false
+                        }
+                    }
                     None => false,
                 };
 
