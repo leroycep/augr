@@ -3,6 +3,7 @@ use crate::{format_duration, time_input::parse_default_local};
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Datelike, Duration, Local, NaiveDateTime, Utc};
 use clap::arg_enum;
+use prettytable::{format::FormatBuilder, Table};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use structopt::StructOpt;
@@ -40,6 +41,9 @@ pub struct SummaryCmd {
     ///  within the start and end times.
     #[structopt(long = "edges", case_insensitive = true, default_value = "include")]
     edge_behavior: EdgeBehavior,
+
+    #[structopt(long = "format", case_insensitive = true, default_value = "ascii")]
+    output_format: Format,
 }
 
 arg_enum! {
@@ -57,6 +61,19 @@ impl Default for EdgeBehavior {
     }
 }
 
+arg_enum! {
+    #[derive(Debug)]
+    pub enum Format {
+        Ascii,
+    }
+}
+
+impl Default for Format {
+    fn default() -> Self {
+        Format::Ascii
+    }
+}
+
 impl SummaryCmd {
     #[cfg_attr(feature = "flame_it", flame)]
     pub fn exec(&self, config: &Config) -> Result<()> {
@@ -68,6 +85,7 @@ impl SummaryCmd {
 
         let filter_tags: BTreeSet<String> = self.tags.iter().cloned().collect();
 
+        let now = Local::now();
         let start = self.start.unwrap_or_else(default_start);
         let end = self.end.unwrap_or_else(default_end);
         let first_time = segments
@@ -78,22 +96,33 @@ impl SummaryCmd {
         let mut segments_iter = segments.range(first_time..).peekable();
         let mut total_duration = Duration::seconds(0);
 
-        loop {
-            let (&time, ref tags) = match segments_iter.next() {
+        let mut table = Table::new();
+
+        let table_format = FormatBuilder::new().padding(0, 1).build();
+        table.set_format(table_format);
+
+        table.set_titles(row![
+            u -> "Wk", u -> "Date", u -> "Day", u -> "Tags", ur -> "Start", ur -> "End", ur ->"Time", ur -> "Total"
+        ]);
+
+        let mut prev_date_opt: Option<chrono::Date<Local>> = None;
+
+        'SEGMENTS_LOOP: loop {
+            let (&time, ref tags, first_time_in_range) = match segments_iter.next() {
                 Some(a) => match self.edge_behavior {
                     EdgeBehavior::Clip => {
                         if *a.0 < start {
-                            (&start, a.1)
+                            (&start, a.1, false)
                         } else {
-                            a
+                            (a.0, a.1, true)
                         }
                     }
-                    EdgeBehavior::Include => a,
+                    EdgeBehavior::Include => (a.0, a.1, true),
                     EdgeBehavior::Exclude => {
                         if *a.0 < start {
                             continue;
                         } else {
-                            a
+                            (a.0, a.1, true)
                         }
                     }
                 },
@@ -103,7 +132,7 @@ impl SummaryCmd {
             // Check that tags has all the filter tags that were specified
             for filter_tag in &filter_tags {
                 if !tags.contains(filter_tag) {
-                    continue;
+                    continue 'SEGMENTS_LOOP;
                 }
             }
 
@@ -111,11 +140,11 @@ impl SummaryCmd {
                 break;
             }
 
-            let next_time_or_now = segments_iter
+            let (next_time_or_now, was_next_time) = segments_iter
                 .peek()
-                .map(|(time, _)| *time)
                 .cloned()
-                .unwrap_or_else(Local::now);
+                .map(|(time, _)| (*time, true))
+                .unwrap_or_else(|| (now, false));
             let next_time = match self.edge_behavior {
                 EdgeBehavior::Clip => {
                     if next_time_or_now > end {
@@ -137,14 +166,57 @@ impl SummaryCmd {
             let duration = next_time.signed_duration_since(time);
             total_duration = total_duration + duration;
 
-            println!(
-                "{}\t{}\t{}\t{:?}",
-                time.to_rfc3339(),
-                format_duration(duration),
-                format_duration(total_duration),
-                tags
-            );
+            // Initialize wk, date, and day to current date
+            let mut wk_text = time.format("W%W");
+            let mut date_text = time.format("%Y-%m-%d");
+            let mut day_text = time.format("%a");
+
+            if let Some(prev_date) = prev_date_opt {
+                if time.iso_week() == prev_date.iso_week() {
+                    wk_text = time.format("");
+                }
+                if time.date() == prev_date {
+                    date_text = time.format("");
+                    day_text = time.format("");
+                }
+            };
+            prev_date_opt = Some(time.date());
+
+            let start_time_text = if first_time_in_range {
+                time.format("%H:%M").to_string()
+            } else {
+                String::from("--")
+            };
+
+            let end_time_text = if was_next_time {
+                next_time.format("%H:%M").to_string()
+            } else {
+                String::from("--")
+            };
+
+            match self.output_format {
+                Format::Ascii => table.add_row(row!(
+                    wk_text,
+                    date_text,
+                    day_text,
+                    tags.join(" "),
+                    r -> start_time_text,
+                    r -> end_time_text,
+                    r -> format_duration(duration),
+                    r -> format_duration(total_duration),
+                )),
+            };
         }
+
+        let total_duration_text = format_duration(total_duration);
+        let blank_space_size_of_duration = total_duration_text
+            .chars()
+            .map(|_c| ' ')
+            .collect::<String>();
+        table.add_row(row!("", "", "", "", "", "", "", ur -> blank_space_size_of_duration));
+        table.add_row(row!("", "", "", "", "", "", "", r -> total_duration_text));
+
+        table.printstd();
 
         Ok(())
     }

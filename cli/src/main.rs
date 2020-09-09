@@ -1,6 +1,7 @@
 #[cfg(feature = "flame_it")]
 #[macro_use]
 extern crate flamer;
+#[macro_use] extern crate prettytable;
 
 mod config;
 mod time_input;
