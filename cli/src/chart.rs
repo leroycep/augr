@@ -1,6 +1,6 @@
 use crate::{config::Config, summary::get_segments};
 use anyhow::Result;
-use chrono::{offset::TimeZone, Local, NaiveDate};
+use chrono::{offset::TimeZone, Datelike, Local, NaiveDate};
 use std::collections::BTreeSet;
 use structopt::StructOpt;
 
@@ -37,14 +37,34 @@ impl Cmd {
 
         let mut cur_date = start_date;
 
-        print!("Day ");
-        for hour in 0..24 {
-            print!("{: <3}", hour);
-        }
-        println!();
+        let mut prev_date_opt: Option<chrono::Date<Local>> = None;
+        let mut prev_month = 0;
 
         while cur_date <= end_date {
-            print!("{} ", cur_date.format("%a"));
+            // Print out the week number once for each week
+            let mut should_print_week = true;
+            if let Some(prev_date) = prev_date_opt {
+                if cur_date.iso_week() == prev_date.iso_week() {
+                    should_print_week = false;
+                }
+            }
+            prev_date_opt = Some(cur_date);
+
+            if should_print_week {
+                if prev_month != cur_date.month() {
+                    println!("{: ^83}", cur_date.format("%B %Y"));
+                    print!("           ");
+                    for hour in 0..24 {
+                        print!("{: <3}", hour);
+                    }
+                    println!();
+                }
+                prev_month = cur_date.month();
+
+                print!("{} ", cur_date.format("W%W %d %a"));
+            } else {
+                print!("{} ", cur_date.format("    %d %a"));
+            }
             for section in 0..(24 * 3) {
                 let hour = section / 3;
                 let minutes = (section % 3) * 20;
@@ -54,12 +74,14 @@ impl Cmd {
                     Some((_start_time, cur_tags)) => {
                         if !cur_tags.is_empty() {
                             let mut contains_all_tags = true;
-                            for cur_tag in cur_tags {
-                                if !filter_tags.contains(cur_tag) {
+
+                            for filter_tag in &filter_tags {
+                                if !cur_tags.contains(filter_tag) {
                                     contains_all_tags = false;
                                     break;
                                 }
                             }
+
                             contains_all_tags
                         } else {
                             false
