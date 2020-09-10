@@ -17,10 +17,12 @@ pub fn import<P: AsRef<Path>>(
 
     match repo.try_sync_data() {
         Ok(()) => {}
-        Err(e) => {
-            eprintln!("Failed to sync data in old format: {:?}", e);
-            eprintln!("Continue? (y/N)");
-            todo!();
+        Err(errors) => {
+            for e in errors {
+                eprintln!("Failed to sync data in old format: {:?}", e);
+            }
+            eprintln!("Exiting without importing");
+            return Err(anyhow!("Failed to sync data in old format"));
         }
     };
 
