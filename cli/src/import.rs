@@ -1,4 +1,4 @@
-mod line_format;
+mod patches;
 
 use augr_core::{Patch, Timesheet};
 use clap::arg_enum;
@@ -9,7 +9,7 @@ arg_enum! {
     /// List of formats that can be imported
     #[derive(Copy, Clone, Debug)]
     enum Format {
-        OriginalLineFormat,
+        Patches,
     }
 }
 
@@ -24,10 +24,9 @@ pub struct ImportCmd {
 }
 
 impl ImportCmd {
-    pub fn exec(&self, _timesheet: &Timesheet) -> Result<Vec<Patch>, Box<dyn Error>> {
-        let patches = match self.format {
-            Format::OriginalLineFormat => line_format::import(&self.path).map_err(Box::new)?,
-        };
-        Ok(patches)
+    pub fn exec(&self, config: &crate::config::Config) -> anyhow::Result<()> {
+        match self.format {
+            Format::Patches => patches::import(config, &self.path),
+        }
     }
 }

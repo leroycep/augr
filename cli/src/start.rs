@@ -17,50 +17,62 @@ pub struct StartCmd {
 impl StartCmd {
     pub fn exec(&self, config: &Config) -> anyhow::Result<()> {
         if !config.sync_folder.exists() {
-            eprintln!("Sync folder does not exist; creating folder at {:?}", config.sync_folder);
+            eprintln!(
+                "Sync folder does not exist; creating folder at {:?}",
+                config.sync_folder
+            );
         }
 
-        let now = Local::now();
         let start_time = self
             .time
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
-        let tags = self.tags.to_vec();
 
-        let year_repr = start_time.format("%Y");
-        let month_repr = start_time.format("%m");
-        let filename_repr = start_time.format("%Y%m%d-%H%M%S");
-
-        let mut filepath = config.sync_folder.clone();
-        filepath.push(format!("{}", year_repr));
-        filepath.push(format!("{}", month_repr));
-
-        std::fs::create_dir_all(&filepath).with_context(|| {
-            format!("Failed to create records directory {}", filepath.display())
-        })?;
-
-        filepath.push(format!("{}", filename_repr));
-        filepath.set_extension("toml");
-
-        if filepath.exists() {
-            return Err(anyhow!("A record already exists for {} ({})", start_time.with_timezone(&Local), start_time));
-        }
-
-        let mut doc = Document::new();
-
-        doc["created"] = value(now.to_rfc3339());
-
-        let mut tags_array = Array::default();
-        for tag in tags {
-            tags_array.push(tag).unwrap();
-        }
-        doc["tags"] = value(tags_array);
-
-        let contents = doc.to_string();
-
-        std::fs::write(&filepath, &contents)
-            .with_context(|| format!("Failed to write record to {}", filepath.display()))?;
+        add_event(&config, start_time, &self.tags)?;
 
         Ok(())
     }
+}
+
+pub fn add_event(config: &Config, start_time: DateTime<Utc>, tags: &[String]) -> anyhow::Result<()> {
+    let now = Local::now();
+
+    let year_repr = start_time.format("%Y");
+    let month_repr = start_time.format("%m");
+    let filename_repr = start_time.format("%Y%m%d-%H%M%S");
+
+    let mut filepath = config.sync_folder.clone();
+    filepath.push(format!("{}", year_repr));
+    filepath.push(format!("{}", month_repr));
+
+    std::fs::create_dir_all(&filepath)
+        .with_context(|| format!("Failed to create records directory {}", filepath.display()))?;
+
+    filepath.push(format!("{}", filename_repr));
+    filepath.set_extension("toml");
+
+    if filepath.exists() {
+        return Err(anyhow!(
+            "A record already exists for {} ({})",
+            start_time.with_timezone(&Local),
+            start_time
+        ));
+    }
+
+    let mut doc = Document::new();
+
+    doc["created"] = value(now.to_rfc3339());
+
+    let mut tags_array = Array::default();
+    for tag in tags {
+        tags_array.push(tag.clone()).unwrap();
+    }
+    doc["tags"] = value(tags_array);
+
+    let contents = doc.to_string();
+
+    std::fs::write(&filepath, &contents)
+        .with_context(|| format!("Failed to write record to {}", filepath.display()))?;
+
+    Ok(())
 }

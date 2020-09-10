@@ -9,6 +9,7 @@ mod time_input;
 mod start;
 mod summary;
 mod chart;
+mod import;
 
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -58,9 +59,9 @@ enum Command {
     // #[structopt(no_version, name = "set-start")]
     // SetStart(set_start::Cmd),
 
-    // /// Import data from version 0.1 of augr
-    // #[structopt(no_version, name = "import")]
-    // Import(import::ImportCmd),
+    /// Import data older versions of augr
+    #[structopt(no_version, name = "import")]
+    Import(import::ImportCmd),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -106,6 +107,7 @@ fn main() -> anyhow::Result<()> {
         Command::Start(subcmd) => subcmd.exec(&config)?,
         Command::Summary(subcmd) => subcmd.exec(&config)?,
         Command::Chart(subcmd) => subcmd.exec(&config)?,
+        Command::Import(subcmd) => subcmd.exec(&config)?,
     };
 
     Ok(())
