@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - Unreleased
 ### Added
 - `augr import patches <old_config_path>` will import files from `0.2.1`
+    - This import may be lossy! The old format had nanosecond precision,
+      where the new format only has precision to the second.
 
 ### Changed
 - File format has been simplified. Documentation on the new format is [here](doc/atomic-files-format.md)
