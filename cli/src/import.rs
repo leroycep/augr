@@ -1,8 +1,6 @@
 mod patches;
 
-use augr_core::{Patch, Timesheet};
 use clap::arg_enum;
-use std::error::Error;
 use structopt::StructOpt;
 
 arg_enum! {

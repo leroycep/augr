@@ -1,13 +1,7 @@
 use anyhow::{anyhow, Context};
-use augr_core::{
-    store::{patch::CreateEvent, SyncFolderStore},
-    Patch, Repository,
-};
-use chrono::{DateTime, Utc};
-use std::collections::{BTreeMap, BTreeSet};
+use augr_core::{store::SyncFolderStore, Repository};
 use std::{
     fs::read_to_string,
-    io,
     path::{Path, PathBuf},
 };
 use toml_edit::Document;

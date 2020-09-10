@@ -24,7 +24,6 @@ toml_edit = "0.2"
 anyhow = "*"
 walkdir = "2"
 hostname = "^0.3"
-tabwriter = "1.2"
 prettytable-rs = "0.8"
 
 flame = { version = "0.2.2", optional = true }
