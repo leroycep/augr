@@ -9,6 +9,7 @@ mod time_input;
 mod start;
 mod summary;
 mod chart;
+mod tags;
 mod import;
 
 use std::path::PathBuf;
@@ -47,9 +48,9 @@ enum Command {
     #[structopt(no_version, name = "chart")]
     Chart(chart::Cmd),
 
-    // /// Get a list of all the different tags that have been used.
-    // #[structopt(no_version, name = "tags")]
-    // Tags(tags::TagsCmd),
+    /// Get a list of all the different tags that have been used.
+    #[structopt(no_version, name = "tags")]
+    Tags(tags::Cmd),
 
     // /// Add tags to an existing event
     // #[structopt(no_version, name = "tag")]
@@ -107,6 +108,7 @@ fn main() -> anyhow::Result<()> {
         Command::Start(subcmd) => subcmd.exec(&config)?,
         Command::Summary(subcmd) => subcmd.exec(&config)?,
         Command::Chart(subcmd) => subcmd.exec(&config)?,
+        Command::Tags(subcmd) => subcmd.exec(&config)?,
         Command::Import(subcmd) => subcmd.exec(&config)?,
     };
 
