@@ -9,9 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `augr import patches <old_config_path>` will import files from `0.2.1`
     - This import may be lossy! The old format had nanosecond precision,
       where the new format only has precision to the second.
+- `augr --print-config` will print out the configuration that will be used
+- `augr --print-config-path` will print out the path to the configuration file
+- `augr summary --edges` changes how the summary handles the edge of the range
+    - `include` will display the events on the edges
+    - `exclude` will never display the events on the edge of the range
+    - `clip` will "cut" the events to fit inside the given range
 
 ### Changed
 - File format has been simplified. Documentation on the new format is [here](doc/atomic-files-format.md)
+- `augr tags` will now count how many time a tag has been used and output in decesending order
 
 ### Removed
 - The `OriginalLineFormat` import has been removed
