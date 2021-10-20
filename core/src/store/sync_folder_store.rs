@@ -81,7 +81,14 @@ impl SyncFolderStore {
         let meta_folder = self.root_folder.join("meta");
         let meta_file = self.meta_file_path();
 
-        let sync_folder_items = meta_folder.read_dir().context(IOError {})?;
+        if !meta_folder.exists() {
+            create_dir_all(&meta_folder).context(IOError {})?;
+        }
+
+        let sync_folder_items = meta_folder
+            .read_dir()
+            .context(ReadFile { path: meta_folder })?;
+
         let iter = sync_folder_items
             .filter_map(|d| d.ok())
             .filter(move |dir_entry| dir_entry.path() != meta_file)
